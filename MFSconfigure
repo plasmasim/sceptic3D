@@ -8,9 +8,13 @@ if [ -x "`which mpif77`" ] ; then
    echo choosing compiler mpif77
    COMPILER=mpif77
    # COMPILE-SWITCHES choice
-   if [ -n "`$COMPILER -show | grep g77`" ] ; then
+   if [ -n "`$COMPILER --version | grep GNU`" ] ; then
        echo changing compile switches
-       NW="-Wno-globals -Wno-unused-labels"
+       if [ -n "`$COMPILER -show | grep g77`" ] ; then
+	   NW="-Wno-globals -Wno-unused-labels"
+       else
+	   NW=" -Wno-unused-labels"
+       fi
    else
        NW=$(NOWARN)
    fi
@@ -19,7 +23,7 @@ else
    if [ -x "`which gfortran`" ] ; then
       echo choosing compiler gfortran
       COMPILER=gfortran
-      NW=$(NOWARN)
+      NW=" -Wno-unused-labels"
    else
 	if [ -x "`which g77`" ] ; then
 	    echo choosing compiler g77

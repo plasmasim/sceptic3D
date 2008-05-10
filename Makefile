@@ -21,7 +21,7 @@ ifeq ("$(NOWARN)","")
 	NOWARN=""
 endif
 
-COMPILE-SWITCHES =-Wall -Wno-unused-variable   -O2  -I.
+COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
 # For debugging.
 #  -g  -ffortran-bounds-check
 # For profiling
@@ -29,7 +29,7 @@ COMPILE-SWITCHES =-Wall -Wno-unused-variable   -O2  -I.
 
 REINJECT=orbitinject.o extint.o maxreinject.o
 
-MPICOMPILE-SWITCHES = $(NOWARN) -DMPI $(COMPILE-SWITCHES)
+MPICOMPILE-SWITCHES = -DMPI $(COMPILE-SWITCHES)
 
 OBJECTS = initiate.o advancing.o randc.o randf.o diags.o outputs.o	\
  chargefield.o $(REINJECT) stringsnames.o		\
@@ -38,7 +38,9 @@ rhoinfcalc.o shielding3D.o
 
 MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
 
-sceptic3D : sceptic3D.F  piccom.f  ./accis/libaccisX.a $(OBJECTS) makefile
+all : makefile sceptic3D
+
+sceptic3D :  makefile sceptic3D.F  piccom.f  ./accis/libaccisX.a $(OBJECTS)
 	$(G77) $(COMPILE-SWITCHES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
 
 # The real Makefile
@@ -53,7 +55,6 @@ makefile : Makefile MFSconfigure
 	./MFSconfigure
 	@echo Now running make again using the new Makefile
 	make -f $(MAKEFILE)
-
 
 sceptic3Dmpi : sceptic3D.F  piccom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
 	$(G77) $(MPICOMPILE-SWITCHES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)

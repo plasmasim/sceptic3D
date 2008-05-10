@@ -1,0 +1,391 @@
+\newif \iftth
+\iftth 
+\else
+\parindent= 0 pt
+\parskip = 2 pt
+\pretolerance=9000
+\overfullrule 0 pt
+\rightskip 0pt plus0pt minus1pt
+\fi
+
+\magnification \magstep2
+
+\centerline{\bf Summary of ACCIS plotting system routines}
+
+\centerline{I.H.Hutchinson}
+\bigskip
+
+\beginsection{Conventions}
+
+For purposes of this summary, the following implicitly indicate types:
+i: integer, c: character, l: logical, all others: real.
+Terminating letter indicates: v: vector (1-d array), a: 2-d array.
+
+\beginsection{Automatic plotting, single call plots.}
+
+AUTOPLOT(xv,yv,ilength) Line plot yv versus xv; linear axes.
+
+AUTOMARK(xv,yv,ilength,isym) Plot using symbol isym.
+
+LAUTOPLOT(xv,yv,ilength,lnx,lny) Line plot with logarithmic axis in x or y.
+
+LAUTOMARK(xv,yv,ilength,lnx,lny,isym) Symbol plot with logarithmic axis(es).
+ 
+YAUTOPLOT(yv,ilength) Line plot yv versus index; linear axes.
+
+
+\beginsection{Setup}
+
+PLTINIT(xmin,xmax,ymin,ymax) Switch to graphics, set world scaling.
+
+FITINIT(xmin,xmax,ymin,ymax) same but fitting nice ranges.
+
+SCALEWN(xmin,xmax,ymin,ymax,lnx,lny) Set world scaling, possibly log.
+
+FITSCALE(xmin,xmax,ymin,ymax,lnx,lny) same but fitting nice ranges.
+
+PLTINASPECT(xmin,xmax,ymin,ymax) Initiate graphics. Resize axis region
+to retain aspect ratio of plot. Set world scaling.
+
+AXREGION(xin,xan,yin,yan) Set the axis region in normal units.
+Default: .31,.91,.1,.7
+
+AXPTSET(xfrac,yfrac) Set the axis point (i.e. intersection) at specified
+fraction of the plot region. (Default 0.,0.)
+
+MULTIFRAME(irows,icolumns,ispace) For subsequent plots (using pltinit),
+plot irows x icolumns plots per page, with label space determined by
+ispace (bit0 implies space x, bit1 y). Call with irows=0, single frame.
+
+PFSET(inum) Set file plotting for hardcopy. inum=(0:no, 1:hp, 2:ps, 3:eps).
+If inum.eq.-1, then prompt for choice. If inum.lt.-1 output to file
+only, not screen.
+
+WINSET(lwin) Set windowing to axis-region on or off (.false. default).
+
+TRUNCF(xmin,xmax,ymin,ymax) Set rectangular truncation (windowing) norm-units.
+If all args=0, switch off (default).
+
+PLTEND() Flush graphics, wait for carriage return. Then close, return to text.
+
+\beginsection{Color}
+
+\iftth \special{html:<a href="filltest.f"><img align="right" src="filltest.png"></a>}
+COLOR(icol) Set current color of 0-15. Default 15 black (on white).
+
+GRADCOLOR(icol) Set current color from a 0-240 color gradient range.
+
+ACCISGRADINIT(ir1,ig1,ib1,ir2,ig2,ib2) Set the gradient color range,
+rgb amplitudes 0-65535.
+
+IGETCOLOR() Integer function.  Get the number of the current
+color. [You have to know if it is a 0-15 or a gradient color].
+
+PATHFILL() Fill the path just drawn, with the current color. A path is
+a set of vectors all drawn with pen down one after the other.
+
+IDARKBLUE(), IDARKGREEN(),  ISKYBLUE(),  IBRICKRED(),  IPURPLE(),
+IGOLD(),  IGRAY(),  ILIGHTGRAY(),  IBLUE(),  IGREEN(),  ICYAN(),
+IRED(),  IMAGENTA(),  IYELLOW(),  IBLACK(): Integer functions returning
+the 16-color number that gives what their name indicates ($=1-15$).
+
+GRADLEGEND(c1,c2,x1,y1,x2,y2,colwidth,lpara) draw a color gradient
+axis-legend. Value corresponding to color goes from c1 to c2: the ends of
+the color gradient. Position of axis is (x1,y1) to (x1,y2) in axis-box
+units. Width of color bar is colwith times axis-box
+width. lpara=.true. says use parallel labels.
+
+
+\beginsection{Data plotting}
+
+POLYLINE(xv,yv,ilength) Draw a polyline on an already setup graph.
+
+DASHSET(idash) Set dashed line character for polyline. 
+(0:solid, 1:long, 2:short, 3:long/short, 4:dots)
+
+LABELINE(xv,yv,ilength,clabel,ilablen) Draw polyline with embedded label
+of length ilablen.
+
+YPOLYLINE(yv,ilength) Draw a polyline on an already setup yautoplot.
+
+POLYMARK(xv,yv,ilength,isym) Draw data marked by symbols isym:
+1 hollow square, 2 hollow triangle, 3 bullet, 4 solid square, 5 solid 
+triangle, 6 hollow star, 7 solid star, 8 hollow diamond, 9 flag, 10 +,
+11 x, 12 diamond, 13 -, 14 inverted triangle, 15 circle. Else
+char(isym), so ichar('c') gives 'c', ichar('c')+128 gives the font-2
+symbol corresponding to 'c' (xi).
+
+POLYDRAW(xv,yv,ilength,DRAWFN) Draw data marked by symbol defined by
+the routine DRAWFN, a subroutine with 2 real arguments, being the
+normalized x and y position of the symbol center, which draws the symbol.
+Specify EXTERNAL DRAWFN in the calling routine. Built-in routines are
+ACCIRCLE, ACTRID, ACAST, ACX, ACPLUS.
+
+ACGEN(x,y) is a general routine to be passed to POLYDRAW that will draw a
+user-defined symbol without having to define an actual
+function. Instead the subroutine ACGSET(xv,yv,ilength,ifill) is called
+first with arguments giving the symbol vertices in units of the
+charsize, and calling for filling of the symbol if ifill .ne. 0.
+Thereafter acgen generates the sybol specified. Since the width and
+height are scaled by chrswdth and chrshght, aspect-ratio can be scaled
+using charsize().
+
+POLYERR(xv,yv,errv,ilength) Draw error bars yv to yv+errv.
+
+\beginsection{Axes}
+
+AXIS() Automatic x and y axis.
+
+AXIS2() Put tics on the opposite side of the axis box.
+
+XAXIS(first,delta) Draw an axis; labels starting at first, spaced by delta.
+If delta=0, autofit labels.
+
+YAXIS(first,delta) If axis is log, first indicates major subtic.
+
+ALTXAXIS(xi,xa) Draw an alternative xaxis whose ends have world values
+scaled by the factors xi and xa.
+
+ALTYAXIS(yi,ya) Normally the axis position would be moved by
+axptset(1.,1.) and probably ticrev(), all manually, before drawing.
+
+AXLABELS(cxlab,cylab) Label the x/y axes with strings.
+
+BOXTITLE(ctitle) Label the plot with a string centered at the top.
+
+GAXIS(amin,amax, igpow,first,delta, xmin,xmax,ymin,ymax, lpara,laxlog)
+General axis with ends positioned at (xmin, ymin) (xmax, ymax) normal
+units. World axis labels based on world end values amin, amax, first, delta,
+igpow (power of ten label).  Lpara puts labels parallel (else
+perp). Laxlog logarithmic.
+
+AXPTSET(xpt,ypt) Set the axis intersection point at specified fractions of
+the full lengths of the axes. This determines where the axes are drawn.
+
+TICSET(xlen,ylen,xoff,yoff,ixw,iyw,ixp,iyp) Set tic lengths, label
+offsets, widths, decimal points. Labels switched off by width
+ixw$\le$0. Defaults set respectively if reals all =0 or ints all
+=0. (Defaults: .015,.015,-.03,-.02,4,4,1,1)
+
+TICREV() Reverse the tics and labels to the other side of axis.
+
+TICLABTOG() Toggle the tic labels on and off.
+
+TICNUMSET(itics) Set the number of tics of axis (approximately).
+
+\beginsection{Text plotting}
+
+\iftth \special{html:<img align="right" src="fontshow.png">}
+
+Special text is accessed via ``$\backslash$'' or ``!'' followed by one of 
+the following:
+{\parindent 5 pc
+\item{@}       to normal font 0.
+\item{A}       to font 1 (math)
+\item{B}       to font 2 (italic)
+\item{D}       Toggle subscript mode
+\item{U}       Toggle superscript mode
+}
+
+JDRWSTR(xn,yn,cstring,just) Draw cstring at (xn,yn)(normal), justified
+per parameter just:  0. centered, +1. normal left-justified, etc.
+
+DRCSTR(cstring) Draw cstring from current position. Leave at end of string.
+
+DRWSTR(xn,yn,cstring) Draw cstring from (xn,yn)norm. Leave at end of
+string.
+
+WSTR(cstring) Real function: normal-units length of string at current size.
+
+CHARSIZE(width,height) Set character size. (0,0) sets default (.015,.015).
+
+CHARANGL(theta) Set character angle to horizontal in degrees.
+
+GETCANGL(theta) Get character angle to horizontal in degrees.
+
+ANNOTE [DOS only] Enter interactive annotation mode. Type help for help.
+
+GETFONT(fontname) Read a new fontset from file.
+
+LEGENDLINE(xg,yg,nsym,cstring) Draw a legendline at fractional
+position in plot box: xg, yg.  Use symbol nsym if positive and $\le$256.
+If nsym$<$0 use both line and symbol. If nsym=0 put only line.  
+If nsym=257 use nothing but put the string at the usual place.
+If nsym=258 use nothing but put the string at the start of the line.
+
+\beginsection{Contouring}
+
+\iftth \special{html:<a href="contest.f"><img align="right" src="contest.png"></a>}
+
+CONTREC(za,cworka,ixm,iym,zclv,icl) Simple contour of entire array za(ixm, iym)
+at levels zclv(icl). If icl=0 fit contour levels instead. If icl.lt.0 no
+line labels. Cworka is a work character array at least (ixm, iym).
+
+CONTOURL(za,cworka,iLdim,ixm,iym,zclv,icl,x,y,icsw) General contour
+za(1:ixm(of ildim), iym) at zclv(icl) (or fit if icl=0, using zclv(1)
+if non-zero to determine contour number) on a mesh defined by
+x,y. Switch icsw determines call type: 0 equal spacing, x,y not used;
+1 vectors x,y determine mesh; 2 arrays x,y determine mesh; bit 5 (16)
+sets coloring; bit 6 (32) omits contour lines. Color contouring should
+be done with icl .ge. 2 and the maximum and minimum values in zclv(1)
+and zclv(icl). Then a gradlegend can be constructed with these values.
+
+CONTOUR(za,xa,ya,ix,iy,zclv,icl) Simple contour over mesh xa,ya of entire
+arrays, needing no extra work space. No line labelling.
+
+AUTOCOLCONT(za,iLdim,ixm,iym) Color contour za on rectangular mesh.
+
+\beginsection{Three-dimensional routines}
+
+\iftth \special{html:<a href="hidtest.f"><img align="right" src="hidtest.png"></a>}
+
+HIDWEB(xv,yv,za,iL,ix,iy,isw) Draw a 3-D web of za(ix,iy) (leading
+dimension iL) at xv,yv.  View obtained from file eye.dat (3 reals) or
+default if nonexistent. Switch isw: Lowest byte .lt.0 no axes;
+abs(isw): 0,1 scale to fit; 2 use last scale; 4 don't hide
+lines. Second byte (*256) color of web if non-zero. Third byte
+(*65536) color of axes (if !=0). (Remains set).
+
+SURF3D(xa,ya,za,iL,ix,iy,isw,worka) Draw a 3-d surface of za(ix,iy),
+(leading dimension iL) at xa,ya.  View obtained from file eye.dat (3
+reals) or default if nonexistent. Switch isw: Lowest byte .lt.0 no
+axes; abs(isw): 0,1 scale to fit; 2 use last scale. Second byte (*256)
+color of web if non-zero. Third byte (*65536) color of axes (if
+!=0). (Remains set). Array worka(0:iL+1,0:iy+1) must be provided.
+Surface is drawn as quadrilaterals filled with color from gradient
+according to (za) height scaled to the total height.
+
+AXON(xv,yv,za,iL,ix,iy) Plot axonometrically za(ix,iy) at xv,yv (i.e.
+staggered slices at constant y, no perspective).  Use eye.dat data, if
+exists; first two values indicate normal distance offset of axis end.
+
+WEBDRW(xv,yv,za,iL,ix,iy,icorner) Draw  a 3-D web using current projection.
+Return closest corner to view point in icorner.
+
+SURFDR3(xa,ya,za,iL,ix,iy,worka) Draw 3-D surface using current projection.
+
+HIDINIT(top,bot) Set the top and bottom hiding horizons (usually 0.,1.).
+
+HDPRSET(isw,fxd) Set hiding and 2-3 projection per switch isw. Zero
+off.  Positive: hiding only. Negative: hiding and projection with
+fixed coordinate either (x,y,or z) for isw=(-1,-2 or -3) having value
+fxd. For left handed system, isw=(-4,-5 or -6).
+
+HDPROJECT(ihide,iproject,ifixedcoord,fxdworld,irlsys)
+Set hiding (ihide = 1), projecting 2$\rightarrow$3 (iproject.ne.1), which
+coordinate to hold fixed (ifixedcoord), what its world value is
+(fxdworld), and right (+1) or left (-1) handed system (irlsys).
+
+SCALE3(xmin,xmax,ymin,ymax,zmin,zmax) Set 3-D world scaling to cube size.
+
+SETCUBE(xc,yc,zc,xcen,ycen) Set norm-value of cube edges (+-) and 2-d 
+position of cube center.
+
+SCBN(icoord) Real function returns normalized value position of cube face
+corresponding to coordinate icoord=constant (icoord =1,2,3). So for
+example to project onto the z=constant (negative) face of the cube,
+you do: call hdprset(-3,-scbn(3))
+
+TRN32(x,y,z,xt,yt,zt,ifl) If ifl=1, set 3-D transform; (x,y,z) is
+point looked at, (xt,yt,zt) is eye. If ifl=2, set axonometric, offset
+xt,zt.  If ifl=0 transform (x,y,z) to (xt,yt).
+
+VEC3W(x,y,z,ipen) Draw world vector to (x,y,z).
+
+VEC3N(x,y,z,ipen) Draw norm vector to (x,y,z). Domain (-1.,1.) covers
+the cube.
+
+WXYZ2NXYZ(xw,yw,zw,xn,yn,zn) Transform from world 3-D vector to
+normalized.
+
+CUBED(icorner) Draw a cube outline when icorner is the nearest.
+Code is 1,2,3,4 anticlockwise (from top) from x3min,y3min, + top - bottom.
+
+AXIDENT3() Identify the 3 axes (logically x, y, z).
+
+AX3LABELS(charx,chary,charz) Label the three 3-D axes.
+
+AXPROJ(ic) Draw axes, centered at corner given by ic.
+Corner=bits0-3(ic). If bit4(ic)=1, flip labels.  If bit5(ic)=1,
+x-labels vertical; if bit6(ic)=1, y-labels vertical, else horizontal.
+
+HIDVECN(x2,y2,ipen) Draw a (2-D) vector, hiding appropriately.
+
+TN2S(px,py,sx,sy) Transform normalized to px,py to screen coordinates
+sx,sy. If (world3.h) ihiding is $<0$, project in direction of 3-d axis
+mod(abs(ihiding),2) at value fixedn, right/left-handed when
+$(1\le-ihiding\le3 )$ or $(4\le-ihiding\le 6)$.
+
+EYE3D(isw) Enter interactive rotation of the view of 3-D drawing. The
+routine responds to a mouse drag in the window. On button release the
+routine exits with isw=1 if motion occured or isw=0 if no
+motion. Normally motion calls for a redraw of the plot and reentering
+eye3d, while no motion is the signal to continue. Thus the following
+code gives interactive examination of the object:
+{\parindent 5em\parskip 0pt
+\item{51}Continue
+\item{}Drawing commands ...
+\item{}call eye3d(isw)
+\item{}if(isw.ne.0)goto 51\par
+}
+
+IEYE3D() Integer function of convenience to return switch value of eye3d.
+
+\beginsection{Primitives}
+
+VECW(x,y,ipen) Draw world-unit vector to (x,y) with pen up (ipen=0) or down (1).
+
+VECN(x,y,ipen) Draw norm-unit vector to (x,y) with pen up (0) or down (1).
+
+WX2NX(wx), WY2NY(wy) Real functions convert world to normal units.
+
+XN2XW(wx), YN2YW(wy) Real functions convert normal to world units.
+
+GTIC(xgw,ilab,xg,yg,tcos,tsin,axcos,axsin,lpara) Low level tic drawing.
+
+\beginsection{Utilities}
+
+FITRANGE(min,max,itics,ipow,fac10,delta,first,xlast) Fit a maximum of
+itics ticks to range (min, max). Decide a scaling factor 10$^{\rm
+ipow}$=fac10 and a sensible (scaled) delta between tics. First (xlast)
+is integer multiple of delta lying closest to min (max) outside the
+range (min,max). So fac10*(first+i*delta) are the tick values.
+
+MINMAX(xv,isize,min,max) Find min and max of vector of size isize.
+
+MINMAX2(xa,iL1,ix,iy,min,max) Find min and max of 2-d array of
+leading dimension iL1, over indices (ix,iy).
+
+FWRITE(x,iwdth,ipoint,cstring) Format write the float x into cstring
+with specified ipoint decimal places. Total width returned as iwdth.
+
+IWRITE(i,iwdth,cstring) Format the integer i into cstring, return iwdth.
+
+TERMCHAR(cstring) Terminate the string in 0, truncating trailing spaces.
+
+ASLEEP(iusec) Insert a delay of approximately iusec microsec into both
+live plotting and ps files, for making sequential drawing animations.
+Timing will be much slower over remote Xservers and serious bandwidth
+wasted because delays are generated by writing to the screen. When
+playing such ps files using ghostscript, the duration can be changed
+by an arbitrary (real) factor by predefining the gs macro SF using a
+command such as
+
+gs -c /SF 2.5 def -f plot0001.ps
+
+which causes the animation duration to be multiplied by 2.5
+
+\beginsection{Linking}
+
+The routines are normally compiled and gathered into a library which
+is subsequently linked against. The interface routines are contained in
+vecx.c or vecwin.c. Of these driver files, the routines svga, txtmode,
+vec, vecfill, scolor, accisgraddef, acgradcolor, getrgbcolor are
+public, for calling by higher level routines, and possibly the user. 
+
+For X window systems, they require the Xlib and Xt libraries, calling
+for compiler/linker arguments such as  -L/usr/X11R6/lib/ -lXt -lX11.
+
+
+\end
+

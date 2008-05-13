@@ -324,7 +324,7 @@ c      call contourl(rho(1,1),cworka,nr,nr,nth,zclv,icl,xrho,yrho,ntype)
       endif
 c      call color(15)
       call gradlegend(zclv(1),zclv(ncl),
-     $     .1,1.25,.9,1.25,0.02,.true.)
+     $     1.15,.1,1.15,.9,0.02,.false.)
       call axis()
       call axlabels('x density color, velocity arrows','y')
 c      call legendline(.1,-.3,258,'density color-contours')
@@ -509,7 +509,7 @@ c      call axptset(1.,1.)
       call scalewn(-1.,1.,0.,rhopm, .false.,.false.)
 
       call axis()
-      call boxtitle('Density')
+c      call boxtitle('Density')
       call axlabels('cos!Aq!@','n/n!A!d;!d!@')
 
  

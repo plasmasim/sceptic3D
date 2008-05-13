@@ -708,17 +708,23 @@ c Average various fluxes and fields:
             call jdrwstr(0.05,0.7,string,1.)
          endif
       endif 
-      if(lplot) call pltend()
-c Restore the permanent plotting switch.
-      lplot=lpstore
 
-      if(writepart) call partwrt()
-      
       diags=.true.
 
       call chargetomesh()
   
       call sumreduce()
+
+      if(myid.eq.0)then
+c Write the output file.
+         call output(dt,i-1,fave,icolntype,colnwt)
+         if (norbits.ge.1) call orbitoutput()
+      endif
+      if(writepart) call partwrt()
+
+      if(lplot) call pltend()
+c Restore the permanent plotting switch.
+      lplot=lpstore
 
 c Draw some final diagnostic figures, if flag set.    
       if(finaldiags.and.myid.eq.0)then
@@ -730,11 +736,6 @@ c Draw some final diagnostic figures, if flag set.
          call rhodisplay(15,rhomin,rhomax)
          if(norbits.gt.0) call plotorbits()
          call pltend()
-      endif
-      if(myid.eq.0)then
-c Write the output file.
-         call output(dt,i-1,fave,icolntype,colnwt)
-         if (norbits.ge.1) call orbitoutput()
       endif
 
 #ifdef MPI
@@ -750,7 +751,7 @@ c Use call exit to avoid silly fortran message.
  51   continue
 c Help section
       write(*,*)
-     $ 'Usage: sceptic [-t.. -s.. -d.. -c..',
+     $ 'Usage: sceptic3D [-t.. -s.. -d.. -c..',
      $     ' -x.. -v.. -p.. -l.. -e[..] -r -w -g -?]'
       write(*,*)' e.g. ./sceptic -v0.2 -nr50 -nt30 -d.05'
       write(*,*)' Switch arguments (defaults):[.ff=float, nnn=integer]'

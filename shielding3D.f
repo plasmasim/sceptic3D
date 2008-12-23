@@ -39,6 +39,13 @@ c******************************************************************
       maxits=2*(nrused*nthused*npsiused)**0.333
       dconverge=1.e-5
 
+c Set the potential on axis to what the solver found at the previous timestep
+      do i=2,n1
+         do k=1,npsiused
+            phi(i,1,k)=phiaxis(i,1,k)
+            phi(i,nthused,k)=phiaxis(i,2,k)
+         enddo
+      enddo
          
       do k=1,npsiused
          do j=1,nthused
@@ -78,10 +85,31 @@ c already been calculated in innerbc.f
 c Output the number of iterations
       write(*,'('':'',i3,$)')iter
 
+c     We must average the potential of each psi-cell at theta=0 or
+c     theta=pi. The boundary conditions assume the cell center is on
+c     axis, while what is indeed calculated is the potential at the
+c     center of the first/last theta-cells.
+
+      do i=1,nrused
+         psiave1=0.
+         psiave2=0.
+         do k=1,npsiused
+            psiave1=psiave1+phi(i,1,k)
+            psiave2=psiave2+phi(i,nthused,k)
+         enddo
+         psiave1=psiave1/npsiused
+         psiave2=psiave2/npsiused
+         do k=1,npsiused
+            phiaxis(i,1,k)=phi(i,1,k)
+            phiaxis(i,2,k)=phi(i,nthused,k)
+            phi(i,1,k)=psiave1
+            phi(i,nthused,k)=psiave2
+         enddo
+      enddo
+
 c We must set the potential of the shadow theta-cells to the
 c physical value of the potential at psi+pi. The zero-derivative
 c condition is not valid anymore in the 3D case
-
       do k=1,npsiused
          kk1=mod(k+3*npsi/2-1,npsi)+1
          kk2=mod(k+(3*npsi+1)/2-1,npsi)+1
@@ -92,7 +120,7 @@ c condition is not valid anymore in the 3D case
          enddo
       enddo
          
-c Set the theta shadow cells to their proper value to ensure periodicity
+c Set the psi shadow cells to their proper value to ensure periodicity
       do j=0,nthused+1
          do i=1,nrused
             phi(i,j,npsiused+1)=phi(i,j,1)

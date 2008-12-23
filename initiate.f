@@ -279,12 +279,13 @@ c     (potential straightforwardly obtained by poisson's equation
       decay=max(debyelen,0.01)/sqrt(1+1/(Ti+vd**2))
       do k=0,NPSIFULL
          do j=0,NTHFULL
-            do i=0,NRFULL
-c     Free-space initialization.
+            phi(0,j,k)=vprobe
+            do i=1,NRFULL
+c     Debye Huckel initialization.
                phi(i,j,k)=vprobe*r(1)/r(i)*exp(-(r(i)-r(1))/decay)
-c     Trivial initialization was used for a long time. Hardly different.
-c     phi(i,j)=0.
-               if(i.eq.0)phi(i,j,k)=vprobe
+c     Initialize phizaxis
+               if(j.eq.1) phiaxis(i,1,k)=phi(i,j,k)
+               if(j.eq.nthused) phiaxis(i,2,k)=phi(i,j,k)
             enddo
          enddo
       enddo

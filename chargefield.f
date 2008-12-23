@@ -45,7 +45,7 @@ c     cache issues
       enddo
 
 
-      if(diags.or.savelor) then
+      if(diags) then
          do k=1,npsiused
             do j=1,nthused
                do i=1,nrused
@@ -56,6 +56,7 @@ c     cache issues
             enddo
          enddo
       endif
+c Split the zeroying when diags is on, maybe faster with cache ??
       if(diags) then
          do k=1,npsiused
             do j=1,nthused
@@ -63,22 +64,21 @@ c     cache issues
                   vrsum(i,j,k)=0.
                   vtsum(i,j,k)=0.
                   vpsum(i,j,k)=0.
-                  v2sum(i,j,k)=0.
                   vr2sum(i,j,k)=0.
-                  vtp2sum(i,j,k)=0.
+                  vt2sum(i,j,k)=0.
+                  vp2sum(i,j,k)=0.
+                  vrtsum(i,j,k)=0.
+                  vrpsum(i,j,k)=0.
+                  vtpsum(i,j,k)=0.
                enddo
             enddo
          enddo
-      elseif(debyelen.le.0.01) then
-         do j=1,nthused
-            do k=1,npsiused
+      elseif(debyelen.eq.0) then
+         do k=1,npsiused
+            do j=1,nthused
                do i=1,2
                   vrsum(i,j,k)=0.
-                  vtsum(i,j,k)=0.
-                  vpsum(i,j,k)=0.
-                  v2sum(i,j,k)=0.
                   vr2sum(i,j,k)=0.
-                  vtp2sum(i,j,k)=0.
                enddo
             enddo
          enddo
@@ -145,7 +145,7 @@ c Charge summation.
 c     calculate the sums only if needed, i.e. at the probe edge if Lde=0
 c     or if we plot the diagrams (i.e. not -g)
 
-      if(diags.or.(debyelen.le.0.01.and.irl.le.2)) then
+      if(diags.or.(debyelen.eq.0.and.irl.le.2)) then
 
       vxy=xp(4,i)*cp + xp(5,i)*sp
       vr=vxy*st + xp(6,i)*ct
@@ -166,6 +166,29 @@ c     or if we plot the diagrams (i.e. not -g)
      $     (1.-rf)*thf*pf*vr
       vrsum(irl+1,ithl+1,iplp)=vrsum(irl+1,ithl+1,iplp) + 
      $     rf*thf*pf*vr
+
+      vr2=vr*vr
+
+      vr2sum(irl,ithl,ipl)=vr2sum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vr2
+      vr2sum(irl+1,ithl,ipl)=vr2sum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vr2
+      vr2sum(irl,ithl+1,ipl)=vr2sum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vr2
+      vr2sum(irl+1,ithl+1,ipl)=vr2sum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vr2
+      vr2sum(irl,ithl,iplp)=vr2sum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vr2
+      vr2sum(irl+1,ithl,iplp)=vr2sum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vr2
+      vr2sum(irl,ithl+1,iplp)=vr2sum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vr2
+      vr2sum(irl+1,ithl+1,iplp)=vr2sum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vr2
+
+      endif
+
+      if(diags) then
 
       vt= vxy*ct - xp(6,i)*st
 
@@ -206,62 +229,103 @@ c     or if we plot the diagrams (i.e. not -g)
       vpsum(irl+1,ithl+1,iplp)=vpsum(irl+1,ithl+1,iplp) + 
      $     rf*thf*pf*vp
 
-      vr2=vr*vr
-      vr2sum(irl,ithl,ipl)=vr2sum(irl,ithl,ipl) + 
-     $     (1.-rf)*(1.-thf)*(1-pf)*vr2
-      vr2sum(irl+1,ithl,ipl)=vr2sum(irl+1,ithl,ipl) + 
-     $     rf*(1.-thf)*(1-pf)*vr2
-      vr2sum(irl,ithl+1,ipl)=vr2sum(irl,ithl+1,ipl) + 
-     $     (1.-rf)*thf*(1-pf)*vr2
-      vr2sum(irl+1,ithl+1,ipl)=vr2sum(irl+1,ithl+1,ipl) + 
-     $     rf*thf*(1-pf)*vr2
-      vr2sum(irl,ithl,iplp)=vr2sum(irl,ithl,iplp) + 
-     $     (1.-rf)*(1.-thf)*pf*vr2
-      vr2sum(irl+1,ithl,iplp)=vr2sum(irl+1,ithl,iplp) + 
-     $     rf*(1.-thf)*pf*vr2
-      vr2sum(irl,ithl+1,iplp)=vr2sum(irl,ithl+1,iplp) + 
-     $     (1.-rf)*thf*pf*vr2
-      vr2sum(irl+1,ithl+1,iplp)=vr2sum(irl+1,ithl+1,iplp) + 
-     $     rf*thf*pf*vr2
+  
 
-      v2=(xp(4,i)*xp(4,i) +xp(5,i)*xp(5,i) +xp(6,i)*xp(6,i))
-      v2sum(irl,ithl,ipl)=v2sum(irl,ithl,ipl) + 
-     $     (1.-rf)*(1.-thf)*(1-pf)*v2
-      v2sum(irl+1,ithl,ipl)=v2sum(irl+1,ithl,ipl) + 
-     $     rf*(1.-thf)*(1-pf)*v2
-      v2sum(irl,ithl+1,ipl)=v2sum(irl,ithl+1,ipl) + 
-     $     (1.-rf)*thf*(1-pf)*v2
-      v2sum(irl+1,ithl+1,ipl)=v2sum(irl+1,ithl+1,ipl) + 
-     $     rf*thf*(1-pf)*v2
-      v2sum(irl,ithl,iplp)=v2sum(irl,ithl,iplp) + 
-     $     (1.-rf)*(1.-thf)*pf*v2
-      v2sum(irl+1,ithl,iplp)=v2sum(irl+1,ithl,iplp) + 
-     $     rf*(1.-thf)*pf*v2
-      v2sum(irl,ithl+1,iplp)=v2sum(irl,ithl+1,iplp) + 
-     $     (1.-rf)*thf*pf*v2
-      v2sum(irl+1,ithl+1,iplp)=v2sum(irl+1,ithl+1,iplp) + 
-     $     rf*thf*pf*v2
+      vt2=vt*vt
 
-      vtp2=v2-vr2
-      vtp2sum(irl,ithl,ipl)=vtp2sum(irl,ithl,ipl) + 
-     $     (1.-rf)*(1.-thf)*(1-pf)*vtp2
-      vtp2sum(irl+1,ithl,ipl)=vtp2sum(irl+1,ithl,ipl) + 
-     $     rf*(1.-thf)*(1-pf)*vtp2
-      vtp2sum(irl,ithl+1,ipl)=vtp2sum(irl,ithl+1,ipl) + 
-     $     (1.-rf)*thf*(1-pf)*vtp2
-      vtp2sum(irl+1,ithl+1,ipl)=vtp2sum(irl+1,ithl+1,ipl) + 
-     $     rf*thf*(1-pf)*vtp2
-      vtp2sum(irl,ithl,iplp)=vtp2sum(irl,ithl,iplp) + 
-     $     (1.-rf)*(1.-thf)*pf*vtp2
-      vtp2sum(irl+1,ithl,iplp)=vtp2sum(irl+1,ithl,iplp) + 
-     $     rf*(1.-thf)*pf*vtp2
-      vtp2sum(irl,ithl+1,iplp)=vtp2sum(irl,ithl+1,iplp) + 
-     $     (1.-rf)*thf*pf*vtp2
-      vtp2sum(irl+1,ithl+1,iplp)=vtp2sum(irl+1,ithl+1,iplp) + 
-     $     rf*thf*pf*vtp2
-      endif
+      vt2sum(irl,ithl,ipl)=vt2sum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vt2
+      vt2sum(irl+1,ithl,ipl)=vt2sum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vt2
+      vt2sum(irl,ithl+1,ipl)=vt2sum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vt2
+      vt2sum(irl+1,ithl+1,ipl)=vt2sum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vt2
+      vt2sum(irl,ithl,iplp)=vt2sum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vt2
+      vt2sum(irl+1,ithl,iplp)=vt2sum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vt2
+      vt2sum(irl,ithl+1,iplp)=vt2sum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vt2
+      vt2sum(irl+1,ithl+1,iplp)=vt2sum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vt2
 
-      if(diags.or.savelor) then
+      vp2=vp*vp
+
+      vp2sum(irl,ithl,ipl)=vp2sum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vp2
+      vp2sum(irl+1,ithl,ipl)=vp2sum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vp2
+      vp2sum(irl,ithl+1,ipl)=vp2sum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vp2
+      vp2sum(irl+1,ithl+1,ipl)=vp2sum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vp2
+      vp2sum(irl,ithl,iplp)=vp2sum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vp2
+      vp2sum(irl+1,ithl,iplp)=vp2sum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vp2
+      vp2sum(irl,ithl+1,iplp)=vp2sum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vp2
+      vp2sum(irl+1,ithl+1,iplp)=vp2sum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vp2
+
+      vrt=vr*vt
+
+      vrtsum(irl,ithl,ipl)=vrtsum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vrt
+      vrtsum(irl+1,ithl,ipl)=vrtsum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vrt
+      vrtsum(irl,ithl+1,ipl)=vrtsum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vrt
+      vrtsum(irl+1,ithl+1,ipl)=vrtsum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vrt
+      vrtsum(irl,ithl,iplp)=vrtsum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vrt
+      vrtsum(irl+1,ithl,iplp)=vrtsum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vrt
+      vrtsum(irl,ithl+1,iplp)=vrtsum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vrt
+      vrtsum(irl+1,ithl+1,iplp)=vrtsum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vrt
+
+      vrp=vr*vp
+
+      vrpsum(irl,ithl,ipl)=vrpsum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vrp
+      vrpsum(irl+1,ithl,ipl)=vrpsum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vrp
+      vrpsum(irl,ithl+1,ipl)=vrpsum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vrp
+      vrpsum(irl+1,ithl+1,ipl)=vrpsum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vrp
+      vrpsum(irl,ithl,iplp)=vrpsum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vrp
+      vrpsum(irl+1,ithl,iplp)=vrpsum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vrp
+      vrpsum(irl,ithl+1,iplp)=vrpsum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vrp
+      vrpsum(irl+1,ithl+1,iplp)=vrpsum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vrp
+
+      vtp=vt*vp
+
+      vtpsum(irl,ithl,ipl)=vtpsum(irl,ithl,ipl) + 
+     $     (1.-rf)*(1.-thf)*(1-pf)*vtp
+      vtpsum(irl+1,ithl,ipl)=vtpsum(irl+1,ithl,ipl) + 
+     $     rf*(1.-thf)*(1-pf)*vtp
+      vtpsum(irl,ithl+1,ipl)=vtpsum(irl,ithl+1,ipl) + 
+     $     (1.-rf)*thf*(1-pf)*vtp
+      vtpsum(irl+1,ithl+1,ipl)=vtpsum(irl+1,ithl+1,ipl) + 
+     $     rf*thf*(1-pf)*vtp
+      vtpsum(irl,ithl,iplp)=vtpsum(irl,ithl,iplp) + 
+     $     (1.-rf)*(1.-thf)*pf*vtp
+      vtpsum(irl+1,ithl,iplp)=vtpsum(irl+1,ithl,iplp) + 
+     $     rf*(1.-thf)*pf*vtp
+      vtpsum(irl,ithl+1,iplp)=vtpsum(irl,ithl+1,iplp) + 
+     $     (1.-rf)*thf*pf*vtp
+      vtpsum(irl+1,ithl+1,iplp)=vtpsum(irl+1,ithl+1,iplp) + 
+     $     rf*thf*pf*vtp
+
 
       vx=xp(4,i)
       vxsum(irl,ithl,ipl)=vxsum(irl,ithl,ipl) + 
@@ -336,10 +400,6 @@ c      real phi1ave
       real ncs
       logical first
       integer kk1,kk2
-c     stencil is the excursion around a given cell for the sound speed
-c     averaging
-      integer stencil
-      parameter (stencil=1)
       data relax/1./
       data bcifac/.2/bcpfac/.1/
       data bvf/1.2071/
@@ -386,18 +446,20 @@ c      write(*,*)'cs=',(cs(kk),kk=1,nth)
             s2=0.
             do l=-stencil,stencil
                ja=j+l
-               if(ja.eq.0.or.ja.eq.nthused+1) ja=j
+               if(ja.le.0.or.ja.ge.nthused+1) ja=j
                do m=-stencil,stencil
                   ka=k+m
-                  if(ka.eq.0) then
-                     ka=npsiused
-                  elseif(ka.eq.npsiused+1) then
-                     ka=1
+                  if(ka.le.0) then
+                     ka=npsiused+ka
+                  elseif(ka.ge.npsiused+1) then
+                     ka=ka-npsiused
                   endif
-                  p1=p1+vr2sum(1,ja,ka)*psum(1,ja,ka)-vrsum(1,ja,ka)**2
+                  p1=p1+vr2sum(1,ja,ka)-vrsum(1,ja,ka)**2/(psum(1,ja,ka)
+     $                 +1e-5)
                   v1=v1+vrsum(1,ja,ka)
                   s1=s1+psum(1,ja,ka)
-                  p2=p2+vr2sum(2,ja,ka)*psum(2,ja,ka)-vrsum(2,ja,ka)**2
+                  p2=p2+vr2sum(2,ja,ka)-vrsum(2,ja,ka)**2/(psum(2,ja,ka)
+     $                 +1e-5)
                   v2=v2+vrsum(2,ja,ka)
                   s2=s2+psum(2,ja,ka)
                enddo
@@ -405,7 +467,7 @@ c      write(*,*)'cs=',(cs(kk),kk=1,nth)
 
             if(p1.ne.0)then
                if(s2.gt.0)then
-                  p1=p1/s1
+                  p1=p1
                   v1=v1/s1
                else
                   write(*,*)'s1=0'
@@ -414,7 +476,7 @@ c      write(*,*)'cs=',(cs(kk),kk=1,nth)
             endif
             if(p2.ne.0)then
                if(s2.gt.0)then
-                  p2=p2/s2
+                  p2=p2
                   v2=v2/s2
                else
                   write(*,*)'s2=0'
@@ -445,6 +507,12 @@ c Average the sound-speed value over ncs steps.
             phi(0,j,k)=phi(1,j,k)+phi0mphi1(j,k)+delphinew+
      $           (delphinew-delphi0(j,k))*bcp
             delphi0(j,k)=delphinew
+c     The following line says that the artificial potential of the first
+c     cell can not be higher than what is calculated using
+c     log(rho). Hence sometimes, the potential plot at rcc=1 is capped
+c     at log(rho(rcc=1)). Physically, this is because if the velocity is
+c     already higher than the sound speed, Bohm condition is already
+c     satisfied
             if(phi(0,j,k).gt.phi(1,j,k))phi(0,j,k)=phi(1,j,k)
             phi0mphi1(j,k)=phi(0,j,k)-phi(1,j,k)
 c         write(*,'(10f8.3)')p1,p2,v1,v2,csd(j),cs(j),vs,
@@ -457,6 +525,27 @@ c Adjusting the potential of the first cell.
      $              ,delphinew ,p1,p2,psum(1,j,k),psum(2,j,k),csd(j,k)
                stop
             endif
+         enddo
+      enddo
+
+
+c     We must average the potential of each psi-cell at theta=0 or
+c     theta=pi. The boundary conditions assume the cell center is on
+c     axis, while what is indeed calculated is the potential at the
+c     center of the first/last theta-cells.
+
+      do i=2,nrused
+         psiave1=0.
+         psiave2=0.
+         do k=1,npsiused
+            psiave1=psiave1+phi(i,1,k)
+            psiave2=psiave2+phi(i,nthused,k)
+         enddo
+         psiave1=psiave1/npsiused
+         psiave2=psiave2/npsiused
+         do k=1,npsiused
+            phi(i,1,k)=psiave1
+            phi(i,nthused,k)=psiave2
          enddo
       enddo
 
@@ -809,7 +898,7 @@ c Coefficients for the charge qp
 
 c Psi angular spacing
       real dpsi
-c sin theta at cell boundary
+c sin theta between four cell centers, interpolated in theta and not cos(theta)
       real shalf
 
       real sp,cp,spp,cpp,phihere,sd,sb
@@ -828,32 +917,29 @@ c Initialize coefficient arrays
         
             qpcoef(j)=-(th(j+1)-th(j))
 
-            shalf=sin(acos(0.5*(th(j+1)+th(j))))
-c     The 3D force calculation uses a cariant of ercoef with respect to
-c     the 2D routine.
             ercoefZ(j)=-0.25*(th(j+1)**2-th(j)**2)
-            
             etcoefZ(j)=0.5*(th(j+1)**2/2.-th(j+1)**4/4. -th(j)**2/2.
      $           +th(j)**4/4.)/(th(j+1)-th(j))**2
-            
-            epcoefZ(j)=-ercoefZ(j)/shalf**2/dpsi**2
-            
+            epcoefZ(j)=-ercoefZ(j)/dpsi**2
             ertcoefZ(j)=-(1.-(th(j+1)*(th(j+1)+th(j))+th(j)**2)/3.)
-            
+
             ercoefX(j)=0.25*((thang(j+1)-th(j+1)*sqrt(1-th(j+1)**2)
-     $           )-(thang(j)-th(j)*sqrt(1-th(j)**2)))
-            
+     $           )-(thang(j)-th(j)*sqrt(1-th(j)**2)))       
             etcoefX(j)=-0.125*((3.*thang(j+1)/2-th(j+1)*sqrt(1-th(j+1
      $           )**2)*(3./2+1.-th(j+1)**2))- (3.*thang(j)/2-th(j)
      $           *sqrt(1-th(j)**2)*(3./2+1.-th(j)**2)))/(th(j+1)-th(j))
      $           **2
-            
-            epcoefX(j)=-ercoefX(j)/shalf**2/dpsi**2
-            
+            epcoefX(j)=-ercoefX(j)/dpsi**2
+
+c Old ertcoefX. Only valid to first order in ntheta            
             ertcoefX(j)=-1/(3.*(th(j+1)-th(j))) *((1-th(j+1)**2)**(3./2)
      $           -(1-th(j)**2)**(3./2))
-            
-            erpcoefX(j)=-1./dpsi*(th(j+1)-th(j))/shalf
+c     Alternative version of ertcoefX (correct to second order)
+c            shalf=sin(0.5*(thang(j+1)+thang(j)))
+c            ertcoefX(j)=-1/(2.*(th(j+1)-th(j)))*shalf*((1-th(j+1)**2)
+c     $           -(1-th(j)**2))
+
+            erpcoefX(j)=-1./dpsi*(th(j+1)-th(j))
 
 
          enddo
@@ -870,17 +956,8 @@ c Set the coeffs at nthused to zero
          etcoefX(j)=0.
          epcoefX(j)=0.
          ertcoefX(j)=0.
+         erpcoefX(j)=0.
          
-c         write(*,*)'j, qpcoef,  ercoefZ,  etcoefZ,  epcoefZ, ertcoefZ'
-c         write(*,'(i3,5f10.5)')(j,qpcoef(j),ercoefZ(j),etcoefZ(j)
-c     $        ,epcoefZ(j), ertcoefZ(j),j=1,nthused)
-
-c         write(*,*) ""
-
-c         write(*,*)'j, ercoefX,  etcoefX,  epcoefX,  ertcoefX, erpcoefX'
-c         write(*,'(i3,5f10.5)')(j,ercoefX(j),etcoefX(j)
-c     $        ,epcoefX(j), ertcoefX(j),erpcoefX(j),j=1,nthused)
-
          lnotinit=.false.
       endif
 
@@ -926,23 +1003,48 @@ c We do this at a specified radius node.
          do j=1,nthused-1
 c     The potential at psi=npsiused (and psi=0) already accounts for the
 c     periodicity
-            phihere= 0.25*(phi(k,j,l)+phi(k,j+1,l)+phi(k,j,l+1)+phi(k,j
-     $           +1,l+1))
-         
+            phihere1= 0.5*(phi(k,j,l)+phi(k,j,l+1))
+            phihere2= 0.5*(phi(k,j+1,l)+phi(k,j+1,l+1))
+            phihere=0.5*(phihere1+phihere2)
+                
             if(k.eq.1)then
-               phiherep= 0.25*(phi(k+1,j,l)+phi(k+1,j+1,l)
-     $              +phi(k+1,j,l+1) +phi(k+1,j+1,l+1)) 
-               phiherepp= 0.25*(phi(k+2,j,l)+phi(k+2,j+1,l)
-     $              +phi(k+2,j,l+1) +phi(k+2,j+1,l+1)) 
-               er=-(rkp*rkp*(phiherep-phihere)*(1+.5)- .5
-     $              *rkp2*rkp2*(phiherepp-phiherep))/delr
+               phiherep1=0.5*(phi(k+1,j,l)+phi(k+1,j,l+1))
+               phiherep2=0.5*(phi(k+1,j+1,l)+phi(k+1,j+1,l+1))
+               phiherepp1=0.5*(phi(k+2,j,l)+phi(k+2,j,l+1))
+               phiherepp2=0.5*(phi(k+2,j+1,l)+phi(k+2,j+1,l+1))
+
+               er1=-(rkp*rkp*(phiherep1-phihere1)*(1+.5)- .5
+     $              *rkp2*rkp2*(phiherepp1-phiherep1))/delr              
+               er2=-(rkp*rkp*(phiherep2-phihere2)*(1+.5)- .5
+     $              *rkp2*rkp2*(phiherepp2-phiherep2))/delr
+               
+c Old version (assumes er=a+b*cos(theta))
+c                er=0.5*(er1+er2)
+c New version (assumes er=a+b*theta)
+               er=(er1*thang(j+1)-er2*thang(j))/(thang(j+1)-thang(j))
+     $              +(er1-er2)/((thang(j+1)-thang(j))*(th(j+1)-th(j)))
+     $              *(sqrt(1-th(j+1)**2)-sqrt(1-th(j)**2)-th(j+1)
+     $              *thang(j+1)+th(j)*thang(j))
+               
             elseif(k.eq.nrused)then
-               phiherem= 0.25*(phi(k-1,j,l)+phi(k-1,j+1,l)
-     $              +phi(k-1,j,l+1) +phi(k-1,j+1,l+1)) 
-               phiheremm= 0.25*(phi(k-2,j,l)+phi(k-2,j+1,l)
-     $              +phi(k-2,j,l+1) +phi(k-2,j+1,l+1)) 
-               er=-(rkm*rkm*(phihere-phiherem)*(1+.5)-
-     $              .5*rkm2*rkm2*(phiherem-phiheremm))/delr
+               phiherem1=0.5*(phi(k-1,j,l)+phi(k-1,j,l+1))
+               phiherem2=0.5*(phi(k-1,j+1,l)+phi(k-1,j+1,l+1))              
+               phiheremm1=0.5*(phi(k-2,j,l)+phi(k-2,j,l+1))
+               phiheremm2=0.5*(phi(k-2,j+1,l)+phi(k-2,j+1,l+1))
+
+               er1=-(rkm*rkm*(phihere1-phiherem1)*(1+.5)-
+     $              .5*rkm2*rkm2*(phiherem1-phiheremm1))/delr
+               er2=-(rkm*rkm*(phihere2-phiherem2)*(1+.5)-
+     $              .5*rkm2*rkm2*(phiherem2-phiheremm2))/delr
+
+c Old version (assumes er=a+b*cos(theta))
+c                er=0.5*(er1+er2)
+c New version (assumes er=a+b*theta)
+               er=(er1*thang(j+1)-er2*thang(j))/(thang(j+1)-thang(j))
+     $              +(er1-er2)/((thang(j+1)-thang(j))*(th(j+1)-th(j)))
+     $              *(sqrt(1-th(j+1)**2)-sqrt(1-th(j)**2)-th(j+1)
+     $              *thang(j+1)+th(j)*thang(j))
+
             else
                phiherem= 0.25*(phi(k-1,j,l)+phi(k-1,j+1,l)
      $              +phi(k-1,j,l+1) +phi(k-1,j+1,l+1)) 
@@ -956,16 +1058,24 @@ c     periodicity
             epx=epx+2*ercoefX(j)*exp(phihere)*(spp-sp)
             epy=epy+2*ercoefX(j)*exp(phihere)*(cp-cpp)
 
-
             qp=qp+qpcoef(j)*er*dpsi
 
 c     E=-gradPhi
             eth=-0.5*(phi(k,j+1,l)+phi(k,j+1,l+1)-phi(k,j,l)-phi(k,j,l+1
      $           ))
-            epsi=-0.5*(phi(k,j,l+1)+phi(k,j+1,l+1)-phi(k,j,l)-phi(k,j+1
-     $           ,l))
 
-            
+         epsi1=-(phi(k,j,l+1)-phi(k,j,l))/(sqrt(1-tcc(j)**2)+1e-6)
+         epsi2=-(phi(k,j+1,l+1)-phi(k,j+1,l))/(sqrt(1-tcc(j+1)**2)+1e-6)
+c     Assume (assumes epsi=a+b*theta) epsi is actually dphi/dpsi/sin(theta)
+c            epsi=(epsi1*thang(j+1)-epsi2*thang(j))/(thang(j+1)-thang(j))
+c     $           +(epsi1-epsi2)/((thang(j+1)-thang(j))*(th(j+1)-th(j)))
+c     $           *(sqrt(1-th(j+1)**2)-sqrt(1-th(j)**2)-th(j+1) *thang(j
+c     $           +1)+th(j)*thang(j))
+
+c     Assumes epsi=a+b*cos(theta)). Seems to work better that way
+            epsi=0.5*(epsi1+epsi2)
+
+
             fz=fz+ (ercoefZ(j)*er**2/rcc(k)**2
      $           +etcoefZ(j)*eth*eth
      $           +epcoefZ(j)*epsi*epsi
@@ -982,71 +1092,85 @@ c     E=-gradPhi
      $           +epcoefX(j)*epsi*epsi
      $           +ertcoefX(j)*er*eth/rcc(k) )*(cp-cpp)
      $           +erpcoefX(j)*er*epsi/rcc(k)*(spp-sp)
-            
-            
-c     write(*,*)j,erp,eth,ercoef(j+1)*erp*erp,etcoef(j)*eth*eth,
-c     $           - ertcoef(j)*0.5*(erp+er)*eth
-c     write(*,*)fz
+
+c            if(ir.eq.nrused)then
+c               write(*,*) j,ercoefX(j),er
+c            endif
+
          enddo
       enddo
+
+
       qp=qp
       epz=-epz*r(k)**2
       epx=-epx*r(k)**2
       epy=-epy*r(k)**2
 
+
+
 c     Calculate the Lorentz force on the ions inside the control surface
-c     in a frame where the plasma at infinity is at rest
+c     in a frame where the plasma at infinity is at rest     
+      if(ir.ne.1) then
 
-      
-      if(ir.ge.2.and.savelor) then
-         vx=0.
-         vy=0.
-         vz=0.
-         partsum=0.
-         sd=sqrt(1-cd**2)
-         sb=sqrt(1-cb**2)
-
-         do k=1,npsiused
-            do j=1,nthused
-               do i=1,ir-1
-c Old way, not accurate enough
-c                  vx=vx+(vrsum(i,j,k)*sqrt(1-tcc(j)**2)+vtsum(i,j,k)
+c Old way
+c            vx=0.
+c            vy=0.
+c            vz=0.
+c            partsum=0.
+c            sd=sqrt(1-cd**2)
+c            sb=sqrt(1-cb**2)
+            
+c            do k=1,npsiused
+c               do j=1,nthused
+c                  do i=1,ir-1
+c     Old way, not accurate enough
+c     vx=vx+(vrsum(i,j,k)*sqrt(1-tcc(j)**2)+vtsum(i,j,k)
 c     $                 *tcc(j))*cos(pcc(k))-vpsum(i,j,k)*sin(pcc(k))
-c                  vy=vy+(vrsum(i,j,k)*sqrt(1-tcc(j)**2)+vtsum(i,j,k)
+c     vy=vy+(vrsum(i,j,k)*sqrt(1-tcc(j)**2)+vtsum(i,j,k)
 c     $                 *tcc(j))*sin(pcc(k))+vpsum(i,j,k)*cos(pcc(k))
-c                  vz=vz+vrsum(i,j,k)*tcc(j)
-c     $                 -vtsum(i,j,k)*sqrt(1-tcc(j)**2)
-                  
-                  vx=vx+vxsum(i,j,k)
-                  vy=vy+vysum(i,j,k)
-                  vz=vz+vzsum(i,j,k)
-                  partsum=partsum+psum(i,j,k)
-               enddo
-            enddo
-         enddo
-         i=ir
-         if(i.ne.nrused) then
+c     vz=vz+vrsum(i,j,k)*tcc(j)
+c     $                 -vtsum(i,j,k)*sqrt(1-tcc(j)**2)             
+c                     vx=vx+vxsum(i,j,k)
+c                     vy=vy+vysum(i,j,k)
+c                     vz=vz+vzsum(i,j,k)
+c                     partsum=partsum+psum(i,j,k)
+c                  enddo
+c               enddo
+c            enddo
+c            i=ir
+c            if(i.ne.nrused) then
 c     We only sum the inner half of the last radial cell.  frac\sim 0.5
 c     is the volume ratio of the first half of a cell (radial direction)
 c     over the full cell (first order in delr/rcc(i))
-            frac=(rcc(i)-0.5*delr)/(2*rcc(i))
-         else
-c if ir.eq.nrused, the cell is already half the size
-            frac=1.
-         endif
-         do k=1,npsiused
-            do j=1,nthused
-               vx=vx+frac*vxsum(i,j,k)
-               vy=vy+frac*vysum(i,j,k)
-               vz=vz+frac*vzsum(i,j,k)
-               partsum=partsum+frac*psum(i,j,k)
-            enddo
-         enddo
+c               frac=(rcc(i)-0.5*delr)/(2*rcc(i))
+c            else
+c     if ir.eq.nrused, the cell is already half the size
+c               frac=1.
+c            endif
+c            do k=1,npsiused
+c               do j=1,nthused
+c                  vx=vx+frac*vxsum(i,j,k)
+c                  vy=vy+frac*vysum(i,j,k)
+c                  vz=vz+frac*vzsum(i,j,k)
+c                  partsum=partsum+frac*psum(i,j,k)
+c               enddo
+c            enddo
+            
+c         else
+         vx=curr(1)
+         vy=curr(2)
+         vz=curr(3)
+         partsum=curr(4)
+c         endif
+
+         sd=sqrt(1-cd**2)
+         sb=sqrt(1-cb**2)
          
-               
+
          vx=vx
          vy=(vy-partsum*vd*sd)
          vz=(vz-partsum*vd*cd)
+
          
          fbx=Bz*(vy*cb-vz*sb)
          fby=-Bz*cb*vx

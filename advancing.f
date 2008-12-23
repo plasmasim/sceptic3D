@@ -27,17 +27,16 @@ c___________________________________________________________________________
 
 
 c Advance the particles
-      subroutine padvnc(dtin,icolntype,colnwt,step)
+      subroutine padvnc(dtin,icolntype,colnwt,step,ierad)
 
       integer step
-      real dtin
+      real dt,dtin
 c Common data:
       include 'piccom.f'
       include 'colncom.f'
 
       real accel(3)
-      real dt
-c moved to piccom.f      logical lsubcycle
+      real rn
       real cosomdt,sinomdt
 c temp data:
       real temp
@@ -85,11 +84,12 @@ c Zero the sums.
       xmomprobe=0.
       ymomprobe=0.
       enerprobe=0.
-      collmom=0.
       zmout=0.
       xmout=0.
       ymout=0.
       iocthis=0.
+
+c Velocity and magnetic axis angle sinus
       sd=sqrt(1-cd**2)
       sB=sqrt(1-cB**2)
 
@@ -99,6 +99,10 @@ c Zero the sums.
          enddo
       enddo
  
+c Set the sum of particles velocities to zero
+      do k=1,4
+         curr(k)=0;
+      enddo
 
       ido=npart
 
@@ -185,6 +189,9 @@ c Except for the first time, find new position.
 c For acceleration, when dt is changing, use the average of prior and
 c present values: dtnow.
 c               if(dtprec(i).eq.0.)dtprec(i)=dt
+
+
+
             dtnow=0.5*(dt+dtprec(i))
 
 
@@ -332,40 +339,71 @@ c Position advance
                v2=v2+xp(j+3,i)**2
             enddo
            
-c The time prior to step end of closest approach
-            tm=xdv/v2
             rn=sqrt(rn2)
-c  Test if we went through the probe and came back out.
-            if((0..lt.tm .and. tm.lt.dt .and.
-     $           (rn2 - tm**2*v2).lt.rp2))then
-c For a long time this had an error: used  tm**2/v2 erroneously. 
-c Corrected 9 Apr 07.
-               if(rn.gt.r(1))then
-c     write(*,*)'Through probe',tm,(rn2 - tm**2*v2)
-                  rn=0.
-               endif
-            endif
 
 c-----------------------------------------------------------------               
 c Handling boundaries :
+
+            if(rn.le.r(1).or.rn.ge.r(nr))then
+c     We left the computational domain
+               
+c     Rewind time to get the right velocities at the domain exit. Assume
+c     that the particle left the domain at a random time during the last
+c     time-step.
+               dtl=-ran0(idum)*dt
+
+               if(Bz.ne.0) then
+
+c     For strong magnetic fields, the convective Efield may be strong.
+c     In order to get accurate force calculations, we must account for
+c     the fact that the particle may have left the domain between 0 and
+c     dt before now. 
+               
+               
+
+c     Old verlet integrator here because we only really care about the
+c     magnetic field effect
+
+c Account for the E*B drift
+                  xp(5,i)=xp(5,i)-vd*sd
+                  xp(6,i)=xp(6,i)-vd*cd
+c B is not aligned with the z-accis
+                  if(cB.lt.0.999) then   
+                     temp=xp(5,i)
+                     xp(5,i)=temp*cB-xp(6,i)*sB
+                     xp(6,i)=xp(6,i)*cB+temp*sB 
+                  endif
+c     ------
+                  cosomdt=cos(Bz*dtl)
+                  sinomdt=sin(Bz*dtl)         
+                  temp=xp(4,i)
+                  xp(4,i)=temp*cosomdt+xp(5,i)*sinomdt
+                  xp(5,i)=xp(5,i)*cosomdt-temp*sinomdt
+c     ------
+c B is not aligned with the z-accis (Rotate back)
+                  if(cB.lt.0.999) then
+                     temp=xp(5,i)
+                     xp(5,i)=temp*cB+xp(6,i)*sB
+                     xp(6,i)=xp(6,i)*cB-temp*sB 
+                  endif
+c Account for the E*B drift (Transform back)
+                  xp(5,i)=xp(5,i)+vd*sd
+                  xp(6,i)=xp(6,i)+vd*cd
+
+               endif
+
+            else
+c I don't know about that (Foo)
+c               dtl=0
+            endif
+
             if(rn.le.r(1)) then
                ninner=ninner+1
 
-c     Solve for sphere crossing step fraction, s.
-c It ought to be possible to do this with the tm-related information.
-               a=0.
-               b=0.
-               c=0.
-               do j=1,3
-                  a=a+(dt*xp(j+3,i))**2
-                  b=b-2.*xp(j,i)*(dt*xp(j+3,i))
-                  c=c+xp(j,i)**2
-               enddo
-               c=c-r(1)**2
-               s=(-b+sqrt(b**2-4.*a*c))/(2.*a)
-               xc=xp(1,i)-s*dt*xp(4,i)
-               yc=xp(2,i)-s*dt*xp(5,i)
-               zc=xp(3,i)-s*dt*xp(6,i)
+c Collision point
+               xc=xp(1,i)
+               yc=xp(2,i)
+               zc=xp(3,i)
 
                rad=xc**2+yc**2
 c cos(theta) of collision
@@ -410,12 +448,14 @@ c     Collected momentum and energy
                xmomprobe=xmomprobe+xp(4,i)
                ymomprobe=ymomprobe+xp(5,i)
                enerprobe=enerprobe+0.5*v2
-               collmom=collmom+vzinit(i)
+
+
             elseif(rn.ge.r(nr))then
 c     Left the grid outer boundary.
                zmout=zmout-xp(6,i)
                xmout=xmout-xp(4,i)
                ymout=ymout-xp(5,i)
+
 c     Did not leave the grid. Jump to subcycle end.
             else
                goto 81
@@ -423,7 +463,6 @@ c     Did not leave the grid. Jump to subcycle end.
 c We left. If we haven't exhausted complement, restart particle i.
             if(nrein.lt.ninjcomp) then
                call reinject(i,dtin,icolntype,bcr)
-c               dtprec(i)=dtin
                ipf(i)=1
                zmout=zmout+xp(6,i)
                xmout=xmout+xp(4,i)
@@ -453,6 +492,11 @@ c     zero to offset v and x by half a timestep
 c     Call the timestep fraction-remaining random.
                remdt=dtin*ran0(idum)
 
+c     Try to use the real remaining time for remdt (remember dtl is negative)
+c     I think it's wrong
+c               remdt=remdt+dtl
+
+
 
 c     Jump to subcycle end.
                goto 81
@@ -463,16 +507,19 @@ c Break from subcycles after dealing with a particle that left.
             goto 82  
            
  81         continue
-c     Explicit cycle controlled by remaining time in step:
-            if(remdt.gt.0.) goto 80
+c     Explicit cycle controlled by remaining time in step: (Sometimes
+c     problems with roundings when adding multiple subcycles to remdt,
+c     so put a cat at 10^-8)
+            if(remdt.gt.1e-8) goto 80
 c     .................... End of Subcycle Loop .................
 c     Break jump point:
  82         continue
 c -----------------------------------------------------------
                
+            rn=sqrt(xp(1,i)**2+xp(2,i)**2+xp(3,i)**2)
+
             if(ldist) then
 c Start of Various distribution diagnostics.
-               rn=sqrt(xp(1,i)**2+xp(2,i)**2+xp(3,i)**2)
 c     Diagnostics of f_r(rmax):
                if(rn.gt.r(nr-1))then
                   v=(xp(4,i)*xp(1,i)+xp(5,i)*xp(2,i)+xp(6,i)*xp(3,i))/rn
@@ -525,6 +572,9 @@ c Case for ipf(i) le 0 (empty slot) but still wanting to inject.
 c We should not come here unless .not.lfixedn.
 c            write(*,*)'Reinjecting empty slot',i
 
+
+c Still need to work on here.
+
             call reinject(i,dtin,icolntype,bcr)
             dtprec(i)=dtin
             ipf(i)=1
@@ -538,7 +588,21 @@ c     previous run.
 c---------------- End of padvnc particle iteration ------------------
 
 
+c     add the current particle velocity synchronized with its current
+c     position to the total current. Only first order in accel. In
+c     theory we should need to recalculate accel, but we don't do it
+c     until the next timestep
+
+         if(rn.le.rcc(ierad)) then
+            curr(1)=curr(1)+xp(4,i)+0.5*dt*accel(1)
+            curr(2)=curr(2)+xp(5,i)+0.5*dt*accel(2)
+            curr(3)=curr(3)+xp(6,i)+0.5*dt*accel(3)
+            curr(4)=curr(4)+1
+         endif
+
       enddo
+
+
  401  continue
 
       NCneutral=ncollide
@@ -721,11 +785,16 @@ c  bcp=1 -> Quasineutrality on the 15% outer crone
 
 
 c bcp=2 -> Phiout=0
+         
       elseif(bcphi.eq.2) then
          n1=nrused-1
-         do k=1,npsiused
-            do j=1,nthused
-               phi(nrused,j,k)=0.
+
+         do k=0,npsiused+1
+            do j=0,nthused+1
+c Foo
+               phi(n1+1,j,k)=0.2*vprobe*sqrt(1-tcc(j)**2)*cos(pcc(k))
+c               phi(n1+1,j,k)=0.
+               gpc(j,k,4)=phi(n1+1,j,k)
             enddo
          enddo
 
@@ -993,11 +1062,18 @@ c     write(*,*)
 c     write(*,*)'fluxofangle=',(fluxofangle(j),j=1,NTHUSED)
 c     write(*,*)'phi=',(phi(imin,j),j=1,NTHUSED)
 
+
+
 c If prespecified probe potential
+c Account for the convective Electric field due to Bz
       else
+         sB=sqrt(1-cB**2)
+         sd=sqrt(1-cd**2)
+         Exext=-vd*Bz*(cB*sd-sB*cd)
          do j=1,nthused
             do k=1,npsiused
-               phi(imin,j,k)=vprobe+Ezext*tcc(j)
+c               phi(imin,j,k)=vprobe
+               phi(imin,j,k)=vprobe+Exext*cos(pcc(k))*sqrt(1-tcc(j)**2)
             enddo
          enddo     
       endif

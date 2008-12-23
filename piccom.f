@@ -41,7 +41,7 @@ c CIC definitions
       parameter (LCIC=.true.)
       integer nrsize,nthsize,npsisize
 c These correspond to nrfull, nthfull.and npsifull
-      parameter (nrsize=81,nthsize=41,npsisize=41)
+      parameter (nrsize=76,nthsize=31,npsisize=31)
 c Positions and velocities of particles (6-d phase-space).
       real xp(ndim,npartmax)
       real vzinit(npartmax)
@@ -51,8 +51,11 @@ c Flag of particle slot status (e.g. in use or not)
       integer ipf(npartmax)
 c The potential normalized to Te/e
       real phi(0:nrsize,0:nthsize,0:npsisize)
+c The potential on axis (cos(theta)=+-1) before averaging
+      real phiaxis(0:nrsize,2,0:npsisize)
 c Charge density
       real rho(0:nrsize,0:nthsize,0:npsisize)
+      real rhoDiag(0:nrsize,0:nthsize,0:npsisize)
 c Injection complement. How many particles to reinject each step
       integer ninjcomp
 c Highest occupied particle slot.
@@ -60,15 +63,15 @@ c Highest occupied particle slot.
 
       real pi
       parameter (pi=3.1415927)
-      real cerr,bdyfc,Ti,vd,cd,cB,pd,Bz
+      real cerr,bdyfc,Ti,vd,cd,cB,Bz
       logical diags,lplot,ldist,linsulate,lfloat,lat0,lap0,localinj
       logical lfixedn
       integer myid,numprocs
       real rmtoz
-      common /piccom/xp,npart,vzinit,dtprec,phi,rho,cerr,bdyfc,Ti ,vd
-     $     ,cd,cB,pd,diags,ninjcomp, lplot,ldist,linsulate,lfloat,lat0
-     $     ,lap0 ,localinj,lfixedn, myid,numprocs,rmtoz,ipf,iocprev,Bz
-     $     ,lsubcycle,verlet,collcic
+      common /piccom/xp,npart,vzinit,dtprec,phi,rho,rhoDiag,cerr,bdyfc
+     $     ,Ti,vd,cd,cB,diags,ninjcomp,lplot,ldist,linsulate,lfloat
+     $     ,lat0,lap0 ,localinj,lfixedn,myid,numprocs,rmtoz,ipf,iocprev
+     $     ,Bz,lsubcycle,verlet,collcic,phiaxis
 
 
 c *******************************************************************
@@ -83,18 +86,25 @@ c Sum of theta velocities
 c Sum of phi velocities
       real vpsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
 c The sum of particle velocities squared
-      real v2sum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
-c The sum of radial particle velocities squared
       real vr2sum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
-c The sum of non-radial particle velocities squared
-      real vtp2sum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vt2sum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vp2sum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+c Off diagonal terms
+      real vrtsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vrpsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vtpsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+
 c The sum of particle xyz-velocities
       real vxsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vysum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vzsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
 
-      common /momcom/psum,vrsum,vtsum,vpsum,v2sum,vr2sum,vtp2sum,vzsum
-     $     ,vxsum,vysum
+c     Total sum of particle xyz-velocities, i.e. total current curr(4)
+c     is the particle sum
+      real curr(4)
+
+      common /momcom/psum,vrsum,vtsum,vpsum,vr2sum,vt2sum,vp2sum
+     $     ,vrtsum,vrpsum,vtpsum,vzsum,vxsum,vysum,curr
 c*********************************************************************
 c Radius mesh
       real r(0:nrsize),rcc(0:nrsize)
@@ -120,12 +130,14 @@ c Parallel or serial solving
       logical cgparallel
 c Parallel bloc solver arguments
       integer idim1,idim2,idim3
-
+c Stencil is the excursion around a given cell for the sound speed
+c averaging (When running with Lambda=0)
+      integer stencil
 
       common /meshcom/r,rcc,th,tcc,thang,volinv,irpre,itpre,rfac,tfac,
      $     pcc,ippre,pfac, hr,zeta,zetahalf,cminus,cmid,cplus ,avelim
      $     ,nr,NRFULL,NRUSED,NPSIFULL,NPSIUSED,nth,npsi,NTHFULL,NTHUSED
-     $     ,cgparallel,idim1,idim2,idim3
+     $     ,cgparallel,idim1,idim2,idim3,stencil
 c********************************************************************
 c Random interpolate data.
       integer nvel,nQth
@@ -152,15 +164,12 @@ c diagnostic data
       real diagrho(nrsize),diagphi(nrsize)
       real diagchi(0:nthsize)
       real phiout
-      logical savelor
       integer partz,fieldz,epressz,enccharge,lorentz
       parameter(enccharge=1,fieldz=2,epressz=3,partz=4,lorentz=5)
 c Total particle flux to probe
       real fluxprobe(nstepmax)
 c Total momentum flux to probe
-      real zmomprobe,xmomprobe,ymomprobe 
-c Total z-momentum at injection for collected particles
-      real collmom
+      real zmomprobe,xmomprobe,ymomprobe
 c Total energy collected
       real enerprobe
 c Z-momentum flux across outer boundary.
@@ -168,8 +177,6 @@ c Z-momentum flux across outer boundary.
 c Combined zmom data: fields, electron pressure, ion momentum.
 c For inner 1, outer 2. zmom also carries the probe charge
       real zmom(nstepmax,5,2),xmom(nstepmax,2:5,2),ymom(nstepmax,2:5,2)
-c collmomtot is the reduced collmom for each time-step
-      real collmomtot(nstepmax)
 c enertot is the reduced enerprobe for each time-step
       real enertot(nstepmax)
 c Number of particles striking probe in theta/psi cell
@@ -195,8 +202,8 @@ c Cell in which to accumulate distribution functions
      $     diagchi,phiout,nrein,nreintry,ninner,fluxprobe,nincellstep
      $     ,nincell, rhoinf,vrdiagin,vtdiagin, spotrein,averein,fluxrein
      $     ,ntrapre ,adeficit, ircell,itcell,zmout,xmout,ymout,zmomprobe
-     $     ,ymomprobe,xmomprobe ,collmom,fincellave ,zmom,xmom,ymom,
-     $     collmomtot,enerprobe ,enertot,savelor
+     $     ,ymomprobe,xmomprobe,fincellave ,zmom,xmom,ymom,enerprobe
+     $     ,enertot
 c*********************************************************************
 c Poisson coefficients for iterative solution, etc.
 

@@ -38,7 +38,12 @@ c Using the routines in strings_names.f
       filename=' '
       call nameappendexp(filename,'T',Ti,1)
       call nameappendint(filename,'v',nint(100*vd),3)
-      call nameappendint(filename,'a',nint(10*cd),2)
+      if(cd.ne.1)then
+         call nameappendint(filename,'a',nint(10*cd),2)
+      endif
+      if(cB.ne.1)then
+         call nameappendint(filename,'b',nint(10*cB),2)
+      endif
       if(r(nr).ge.100)then
          call nameappendint(filename,'R',ifix(r(nr)/10.),2)
       else
@@ -63,10 +68,10 @@ c Using the routines in strings_names.f
 c Write out averaged results.
       open(10,file=filename)
       write(10,'(a,a)')'  dt    vd    cd      Ti     steps  rhoinf ' ,
-     $       'phiinf  fave  debyelen Vp   Bz...'
+     $       'phiinf  fave  debyelen Vp   Bz  cB ...'
       write(10,'(2f7.4,f7.3,f7.3,i5,f8.1,f7.3,f8.4,f14.5,f8.3,
-     $     f7.3,$)') dt,vd,cd,Ti,i,rhoinf,log(rhoinf),fave,debyelen
-     $     ,vprobe,Bz
+     $     f7.3,f7.3,$)') dt,vd,cd,Ti,i,rhoinf,log(rhoinf),fave,debyelen
+     $     ,vprobe,Bz,cB
 
       if(icolntype.gt.0)then
          write(10,'(i2,f8.4)')icolntype,colnwt
@@ -130,6 +135,10 @@ c      endif
       enddo
       write(10,'(a,i4,i4)')'Volinv. Grid',NRUSED
       write(10,'(10f8.3)')(volinv(k),k=1,NRUSED)
+      write(10,*)'rhoDiag'
+      do j=1,NRUSED
+         write(10,'(10f8.3)')((rhoDiag(j,k,l),k=1,NTHUSED),l=1,NPSIUSED)
+      enddo
 
       call outsums(dt,i+1)
 
@@ -173,8 +182,6 @@ c Particle units nTr^2, Electric nT lambda_D^2.
       write(10,*)'Collisions: Type,Weight,Eneutral,vneutral,Tneutral'
       if(icolntype.ne.0) write(10,701) icolntype,colnwt,Eneutral
      $     ,vneutral,Tneutral
-      write(10,*) 'Ion momentum collection at infinity'
-      write(10,*) collmomtot(nstepmax)
       write(10,*) 'Energy flux to the probe'
       write(10,*) enertot(nstepmax)
       
@@ -398,20 +405,29 @@ c      open(10,file=filename)
       write(10,*)'vpsum'
       write(10,*)(((vpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'v2sum'
-      write(10,*)(((v2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
-     $     ,npsihere)
       write(10,*)'vr2sum'
       write(10,*)(((vr2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vtp2sum'
-      write(10,*)(((vtp2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vt2sum'
+      write(10,*)(((vt2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+     $     ,npsihere)
+      write(10,*)'vp2sum'
+      write(10,*)(((vp2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+     $     ,npsihere)
+      write(10,*)'vrtsum'
+      write(10,*)(((vrtsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+     $     ,npsihere)
+       write(10,*)'vrpsum'
+      write(10,*)(((vrpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+     $     ,npsihere)
+       write(10,*)'vtpsum'
+      write(10,*)(((vtpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
       write(10,*)'vxsum'
-      write(10,*)(((vzsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)(((vxsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
       write(10,*)'vysum'
-      write(10,*)(((vzsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)(((vysum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
       write(10,*)'vzsum'
       write(10,*)(((vzsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1

@@ -31,14 +31,14 @@ c Main program for pic code
 
 c     For now, put maxsteps in piccom
       integer ipstep
-      logical success,finaldiags
+      logical success,finaldiags,ieradset
       real rmax
       character*100 string
       character*10 cfinal
       logical readpart,writepart
       logical lcolcont,lpstore
       logical lsmoothT,lsmoothP
-      integer m2,m3,rshield
+      integer m2,rshield
 c Communicator and id for the conjugate gradient communicator
 c In the case of cgparallel=false, myid2=0 only
 c does the potential calculation
@@ -83,7 +83,6 @@ c Common defaults. Avoid block data.
       vd=.000
       cd=1.0
       cB=1.
-      pd=0.5*pi
       debyelen=.1
       vprobe=-4.
       Ezext=0.
@@ -93,10 +92,9 @@ c Common defaults. Avoid block data.
       finaldiags=.true.
       ldist=.false.
       avelim=0.6
-      nstepsave=0
-      nsamax=40
       lsmoothT=.false.
       lsmoothP=.false.
+      stencil=0.
       lcolcont=.true.
       ircell=1
       itcell=1
@@ -107,17 +105,15 @@ c Common defaults. Avoid block data.
       linsulate=.false.
       lfloat=.false.
       rmtoz=1.
-      ierad=1
       rhomin=0.
       rhomax=0.
 c     lat0 and lap0 mean that we set the polar or poloidal acceleration
 c     artificially to zero
       lat0=.false.  
       lap0=.false.
-c     savelor means that we sumreduce all the informations to calculate
-c     the Lorentz force on the domain. Only true for the first step and
-c     the last quarter of the steps
-      savelor=.true.
+
+
+      ieradset=.false.
 
       cgparallel=.false.
       collcic=.false.
@@ -176,6 +172,7 @@ c Deal with arguments
          endif
          if(string(1:2) .eq. '-f') finaldiags=.false.
          if(string(1:3) .eq. '-er') then
+            ieradset=.true.
             read(string(4:),*)ierad
          elseif(string(1:2) .eq. '-e') then
             ldist=.true.
@@ -190,8 +187,13 @@ c restore defaults on read error.
          if(string(1:4) .eq. '--bz') then 
             read(string(5:),*)Bz
          endif
+#ifdef MPI
          if(string(1:4) .eq. '--sp') then
             cgparallel=.true.
+         endif
+#endif
+         if(string(1:3) .eq. '-st') then
+            read(string(4:),*) stencil
          elseif(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif
@@ -221,8 +223,6 @@ c restore defaults on read error.
             lfloat=.true.
          elseif(string(1:3) .eq. '-pi') then
             linsulate=.true.
-         elseif(string(1:3) .eq. '-pd') then
-            read(string(4:),*)pd
          elseif(string(1:2) .eq. '-p') then
             read(string(3:),*)vprobe
          endif
@@ -303,12 +303,18 @@ c Set Array sizes, allowed variable.
       NPSIUSED=npsi
       NPSIFULL=npsi+1
 
+c Check stencil
+      if(stencil.ge.0.5*min(npsiused,nthused))then
+         stencil=0.5*min(npsiused,nthused)
+      endif
+      
+
+      if(.not.ieradset) then
+         ierad=nrused
+      endif
 c Set when we start the averagings for forces, fluxes ... (m2)
 c Averages over the last 1/4 of the steps
       m2=3*maxsteps/4
-c Calculating the Lorentz force on 1/4 of the steps is expensive and
-c useless. Do the last 10pc only.
-      m3=3*maxsteps/4
 
 c Orbit tracking setting. This is when we want to follow orbits of particles
 c having a thermal speed directed in the z direction, but different impact
@@ -403,9 +409,8 @@ c Assign charge to mesh
 c Collect the partial sums of moments of distribution.
 
       call sumreduce()
-      savelor=.false.
 
-      call rhocalc(lsmoothT,lsmoothP)
+      call rhocalc(lsmoothT,lsmoothP,i)
 
 c Print out diagnostics for tiny meshes.
       if(nr.eq.10) then
@@ -429,7 +434,10 @@ c Print out diagnostics for tiny meshes.
 c Save the permanent plot switch.
       lpstore=lplot
       maccel=maxsteps/3
-      nsamax=min(39,maxsteps/10)+1
+      
+c Must start nstepsave at 1, not 0
+      nstepsave=1
+      nsamax=min(99,maxsteps/10)+1
       if(success)nstepsave=nsamax
 
 c     Timing
@@ -440,8 +448,11 @@ c     Timing
       if (myid.eq.0) then
          write(*,*) "Maxsteps : ",maxsteps
       endif
+
 c Main Stepping loop.
       do i=1,maxsteps
+         
+
 c Plot at some subset of steps.
 c         write(*,*)mod(i-1,ipstep),i,ipstep
          lplot=lpstore.and.(mod(i-1,ipstep).eq.0)
@@ -459,8 +470,8 @@ c     is avoided by ensuring that the lplot is not changed back to true,
 c     on leaving the loop, until we are about to reinitialize plotting.
 c     As a result the last plot is only saved if it is on the maxsteps step.
 
-c     If this flag is on, then we force the tracked particles to have the
-c     following properties.
+c     If the flag orbinit is on, then we force the tracked particles to
+c     have the following properties.
          if (myid.eq.0.and.i.eq.trackinit.and.orbinit) then 
             h=1./2*rmax
             do k=1,norbits
@@ -481,10 +492,12 @@ c     following properties.
          if(i.eq.maxsteps)call pfset(ipfsw)
 c Assign charge to mesh
 
-         if(i.ge.m3) savelor=.true.
          call chargetomesh()
                  
 c Collect the partial sums of moments of distribution.
+#ifdef MPI
+      call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
          call sumreduce()
          call aveupstep()
 
@@ -503,7 +516,7 @@ c     Plot density contours.
                endif
             endif
            
-            call rhocalc(lsmoothT,lsmoothP)
+            call rhocalc(lsmoothT,lsmoothP,i)
           
          endif
 
@@ -583,11 +596,18 @@ c     SCEPTIC2D uses the potential at the current time step.
          endif
 
 
-c Make sure all the processes are synchronized. Seems not necessary
-c#ifdef MPI
-c            call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-c#endif
-
+c Foo
+         
+         do i3=0,npsiused+1
+            do i2=0,nthused+1
+               do i1=1,nrused
+c                  rho(i1,i2,i3)=1.
+c-phi(i1,i2,i3)
+c+exp(phi(i1,i2,i3))
+cexp(-phi(i1,i2,i3))
+               enddo
+            enddo
+         enddo
 
 c     Calculate the potential field, unless it is fixed.
       if (myid2.eq.0.and.infdbl) then
@@ -610,6 +630,8 @@ c     Broadcast back to the slaves.
 #ifdef MPI
          call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
      $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
+         call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
+     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
          call MPI_BCAST(adeficit,1,
      $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
 c     Averein is always broadcasted from 0 since it is calculated
@@ -621,7 +643,10 @@ c     in diags, called only by myid=0, not myid2=0
 
             
 c     Evaluate total charge and z-forces. Not yet implemented for NGP.
-            call esforce(ierad,qp,fz,epz,fbz,fx,epx,fbx,fy,epy,fby)
+c     In sceptic3D, ierad is the outer radius of evaluation, and by
+c     default we also evaluate at the probe surface
+
+            call esforce(1,qp,fz,epz,fbz,fx,epx,fbx,fy,epy,fby)
             zmom(i,enccharge,1)=qp
             zmom(i,fieldz,1)=fz
             zmom(i,epressz,1)=epz
@@ -632,7 +657,9 @@ c     Evaluate total charge and z-forces. Not yet implemented for NGP.
             ymom(i,fieldz,1)=fy
             ymom(i,epressz,1)=epy
             ymom(i,lorentz,1)=fby
-            call esforce(nrused,qp,fz,epz,fbz,fx,epx,fbx,fy,epy,fby)
+
+
+            call esforce(ierad,qp,fz,epz,fbz,fx,epx,fbx,fy,epy,fby)
             zmom(i,enccharge,2)=qp
             zmom(i,fieldz,2)=fz
             zmom(i,epressz,2)=epz
@@ -648,7 +675,7 @@ c     Evaluate total charge and z-forces. Not yet implemented for NGP.
 
 
 c     Main particle advance, including collisions.
-         call padvnc(dt,icolntype,colnwt,i)
+         call padvnc(dt,icolntype,colnwt,i,ierad)
 
 c     Reduce back the flux and distribution data from the particle advance.
          call partreduce(i)
@@ -664,7 +691,6 @@ c     standard step size.
             xmom(i,partz,2)=xmom(i,partz,2)/dt
             ymom(i,partz,1)=ymom(i,partz,1)/dt
             ymom(i,partz,2)=ymom(i,partz,2)/dt
-            collmomtot(i)=collmomtot(i)/dt
             enertot(i)=enertot(i)/dt
 
 c Small mesh written diagnostics.   
@@ -697,7 +723,7 @@ c         write(*,'(/,a)')'Exhausted maxsteps'
 
 c Average various fluxes and fields:
 
-         call avefluxes(itotsteps,m2,m3,dt,fave, zmomave,fezave
+         call avefluxes(itotsteps,m2,dt,fave, zmomave,fezave
      $        ,zmoutave,xmomave,fexave,xmoutave,ymomave, feyave,ymoutave
      $        ,qprobeave,epzave,epxave,epyave)
 
@@ -786,7 +812,7 @@ c Help section
       write(*,*)' --localinj use local potential for injection.',
      $     ' --smooth symmetrize in angle.'
       write(*,*)' -cd.ff drift velocity cosine, -cB.ff Mag field cosine'
-      write(*,*)' --damp.ff specify damping length (typically ~rmax).'
+      write(*,*)' -st.ff(0) stencil for cs calculation'
       write(*,*)' --rhoinf.ff specify constant injection rate, rather',
      $     ' than particle number.'
       write(*,*)' --sp use parallel bloc solver, '
@@ -806,11 +832,12 @@ c End of Main Program.
 c***********************************************************************
 
 c Calculate rho from the psum.
-      subroutine rhocalc(lsmoothT,lsmoothP)
+      subroutine rhocalc(lsmoothT,lsmoothP,i)
 
 c If lsmooth, then symmetrize the density, by averaging.
       logical lsmoothT,lsmoothP
-
+c Current time-step
+      integer i
 c Common data:
       include 'piccom.f'
  501  format(10f8.1)
@@ -890,7 +917,24 @@ c     rho(1,ith)=rho(1,ith)/(1.+(2./3.)*sqrt(r(2)-r(1)))
          enddo
       endif
 
+c     Storing the averaged diagnostic density.  Because densities at
+c     following time-steps are correlated, just save every 4
+c     time-steps. This in effect multiplies by 4 the length of
+c     averaging.
+
+      if(mod(i,4).eq.1)then
+         do i3=1,npsiused
+            do i2=1,nthused
+               do i1=1,nrused
+                  rhoDiag(i1,i2,i3)=(rhoDiag(i1,i2,i3)*(nstepsave-1)
+     $                 +rho(i1,i2,i3))/nstepsave              
+               enddo
+            enddo
+         enddo
+      endif
       
+      
+
       end
  
 c*********************************************************************
@@ -900,24 +944,41 @@ c*********************************************************************
 c The particle number total
       include 'piccom.f'
       include 'mpif.h'
+      logical first
 
+      character*11 fil
 
       real ptot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vrtot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vttot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vptot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+
       real vr2tot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
-      real v2tot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
-      real vtp2tot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vt2tot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vp2tot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+
+      real vrttot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vrptot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vtptot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+
       real vxtot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vytot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vztot(1:nrsize-1,1:nthsize-1,1:npsisize-1)
 
+      real currtot(4)
 
 
 c     psum is always required for the density calculation. Reduce the
 c     full array except in the third dimension (psi)
+
+ 
       call MPI_REDUCE(psum,ptot,(nrsize-1)*(nthsize-1)*npsiused,
+     $     MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
+c     curr is the ion current in the domain, necessary to calculate the
+c     Lorentz force. Altough it is only needed for i>m2 (last part of
+c     the run), it is only a 1*4 array so we reduce it at each timestep
+      call MPI_REDUCE(curr,currtot,4,
      $     MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
 c     If diags is off, we sumreduce the information needed to calculate
@@ -925,11 +986,12 @@ c     the sound speed at the probe edge, needed only in the zero debye
 c     length case. vpsum and vtsum are needed for the Lorentz force
 c     calculation
 
-      if(diags.or.savelor) then
+      if(diags) then
+c         write(*,*) vxsum,vysum,vzsum
          call MPI_REDUCE(vxsum,vxtot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(vysum,vytot,(nrsize-1)*(nthsize-1)*npsiused
-     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)         
          call MPI_REDUCE(vzsum,vztot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
       endif
@@ -937,45 +999,82 @@ c     calculation
       if(diags.or.debyelen.eq.0) then
          call MPI_REDUCE(vrsum,vrtot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         call MPI_REDUCE(vr2sum,vr2tot,(nrsize-1)*(nthsize-1)*(npsisize
-     $        -1),MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vr2sum,vr2tot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
       endif
 
       if(diags)then
-         call MPI_REDUCE(v2sum,v2tot,(nrsize-1)*(nthsize-1)*npsiused
-     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         call MPI_REDUCE(vtp2sum,vtp2tot,(nrsize-1)*(nthsize-1)
-     $        *npsiused, MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
          call MPI_REDUCE(vpsum,vptot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(vtsum,vttot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vt2sum,vt2tot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vp2sum,vp2tot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vrtsum,vrttot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vrpsum,vrptot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vtpsum,vtptot,(nrsize-1)*(nthsize-1)*npsiused
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         
+         
       endif
       if(myid.eq.0)then
-         
+
+         do i1=1,4
+            curr(i1)=currtot(i1)
+         enddo
+
          do i3=1,npsiused
             do i2=1,nthused
                do i1=1,nrused
                   psum(i1,i2,i3)=ptot(i1,i2,i3)
-                  if(diags.or.debyelen.eq.0) then
-                     vrsum(i1,i2,i3)=vrtot(i1,i2,i3)
-                     vr2sum(i1,i2,i3)=vr2tot(i1,i2,i3)
-                  endif
-                  if(diags.or.savelor) then
-                     vxsum(i1,i2,i3)=vxtot(i1,i2,i3)
-                     vysum(i1,i2,i3)=vytot(i1,i2,i3)
-                     vzsum(i1,i2,i3)=vztot(i1,i2,i3)
-                  endif
-                  if(diags)then
-                     v2sum(i1,i2,i3)=v2tot(i1,i2,i3)
-                     vtp2sum(i1,i2,i3)=vtp2tot(i1,i2,i3)
-                     vpsum(i1,i2,i3)=vptot(i1,i2,i3)
-                     vtsum(i1,i2,i3)=vttot(i1,i2,i3)
-                  endif
                enddo
             enddo
          enddo
+         
+         if(diags.or.debyelen.eq.0) then
+            do i3=1,npsiused
+               do i2=1,nthused
+                  do i1=1,nrused
+                     vrsum(i1,i2,i3)=vrtot(i1,i2,i3)
+                     vr2sum(i1,i2,i3)=vr2tot(i1,i2,i3)
+                  enddo
+               enddo
+            enddo
+         endif
+         if(diags) then
+            do i3=1,npsiused
+               do i2=1,nthused
+                  do i1=1,nrused
+                     vxsum(i1,i2,i3)=vxtot(i1,i2,i3)
+                     vysum(i1,i2,i3)=vytot(i1,i2,i3)
+                     vzsum(i1,i2,i3)=vztot(i1,i2,i3)
+                  enddo
+               enddo
+            enddo
+         endif
+         if(diags)then
+            do i3=1,npsiused
+               do i2=1,nthused
+                  do i1=1,nrused
+                     vt2sum(i1,i2,i3)=vt2tot(i1,i2,i3)
+                     vp2sum(i1,i2,i3)=vp2tot(i1,i2,i3)
+                     vrtsum(i1,i2,i3)=vrttot(i1,i2,i3)
+                     vrpsum(i1,i2,i3)=vrptot(i1,i2,i3)
+                     vtpsum(i1,i2,i3)=vtptot(i1,i2,i3)
+                     vpsum(i1,i2,i3)=vptot(i1,i2,i3)
+                     vtsum(i1,i2,i3)=vttot(i1,i2,i3)
+                  enddo
+               enddo
+            enddo
+         endif
+
       endif
+
 #endif
       end
 c***********************************************************************
@@ -1008,8 +1107,6 @@ c***********************************************************************
          call MPI_REDUCE(xmout,xmom(i,partz,2),1,MPI_REAL,MPI_SUM,0,
      $        MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(ymout,ymom(i,partz,2),1,MPI_REAL,MPI_SUM,0,
-     $        MPI_COMM_WORLD,ierr)
-         call MPI_REDUCE(collmom,collmomtot(i),1,MPI_REAL,MPI_SUM,0,
      $        MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(enerprobe,enertot(i),1,MPI_REAL,MPI_SUM,0,
      $        MPI_COMM_WORLD,ierr)
@@ -1056,7 +1153,6 @@ c This shuffle is necessary to accommodate the reduce.
          xmom(i,partz,2)=xmout
          ymom(i,partz,1)=ymomprobe
          ymom(i,partz,2)=ymout
-         collmomtot(i)=collmom
          enertot(i)=enerprobe
 #endif
 c         write(*,*)'zmomstep=',zmomstep(i),'  zoutstep=',zmoutstep(i)
@@ -1081,14 +1177,14 @@ c Increment the averaging processes only here.
       enddo
       end
 c*****************************************************************
-      subroutine avefluxes(itotsteps,m2,m3,dt,fave, zmomave,fezave
+      subroutine avefluxes(itotsteps,m2,dt,fave, zmomave,fezave
      $     ,zmoutave,xmomave,fexave,xmoutave,ymomave, feyave,ymoutave
      $     ,qprobeave,epzave,epxave,epyave)
       include 'piccom.f'
       
-      integer m2,m3
-c     Average the flux to the probe from the few steps (given by m2 and
-c     m3).  Also average the momenta components and place them in
+      integer m2
+c     Average the flux to the probe from the few steps (given by m2).
+c     Also average the momenta components and place them in
 c     zmom(nstepmax,*,*). maxsteps is limited to be nstepmax-1.  The
 c     average is what is output.
       fave=0.
@@ -1121,12 +1217,11 @@ c     average is what is output.
       zmom(nstepmax,1,2)=0.
 
 
-      collmomtot(nstepmax)=0.
       enertot(nstepmax)=0.
       if(itotsteps.ge.2)then
          do k=m2,itotsteps
             fave=fave+fluxprobe(k)
-            do j=2,4
+            do j=2,5
                zmom(nstepmax,j,1)=zmom(nstepmax,j,1)+zmom(k,j,1)
                zmom(nstepmax,j,2)=zmom(nstepmax,j,2)+zmom(k,j,2)
                xmom(nstepmax,j,1)=xmom(nstepmax,j,1)+xmom(k,j,1)
@@ -1137,7 +1232,6 @@ c     average is what is output.
             zmom(nstepmax,1,1)=zmom(nstepmax,1,1)+zmom(k,1,1)
             zmom(nstepmax,1,2)=zmom(nstepmax,1,2)+zmom(k,1,2)
 
-            collmomtot(nstepmax)=collmomtot(nstepmax)+collmomtot(k)
             enertot(nstepmax)=enertot(nstepmax)+enertot(k)
 
             zmomave=zmomave+zmom(k,partz,1)
@@ -1163,7 +1257,7 @@ c     average is what is output.
 c     normalize to rhoinf and the probe area to give normalized flux density
          fave=fave/(4.*pi*r(1)**2)/rhoinf/dt
 
-         do j=2,4
+         do j=2,5
             zmom(nstepmax,j,1)=zmom(nstepmax,j,1)/(itotsteps-m2+1)
             zmom(nstepmax,j,2)=zmom(nstepmax,j,2)/(itotsteps-m2+1)
             xmom(nstepmax,j,1)=xmom(nstepmax,j,1)/(itotsteps-m2+1)
@@ -1175,27 +1269,22 @@ c     normalize to rhoinf and the probe area to give normalized flux density
          zmom(nstepmax,1,2)=zmom(nstepmax,1,2)/(itotsteps-m2+1)
 
          j=lorentz
-         do k=m3,itotsteps
-            zmom(nstepmax,j,1)=zmom(nstepmax,j,1)+zmom(k,j,1)
-            zmom(nstepmax,j,2)=zmom(nstepmax,j,2)+zmom(k,j,2)
-            xmom(nstepmax,j,1)=xmom(nstepmax,j,1)+xmom(k,j,1)
-            xmom(nstepmax,j,2)=xmom(nstepmax,j,2)+xmom(k,j,2)
-            ymom(nstepmax,j,1)=ymom(nstepmax,j,1)+ymom(k,j,1)
-            ymom(nstepmax,j,2)=ymom(nstepmax,j,2)+ymom(k,j,2)
-         enddo
-         zmom(nstepmax,j,1)=zmom(nstepmax,j,1)/(itotsteps-m3+1)/rhoinf
-         zmom(nstepmax,j,2)=zmom(nstepmax,j,2)/(itotsteps-m3+1)/rhoinf
-         xmom(nstepmax,j,1)=xmom(nstepmax,j,1)/(itotsteps-m3+1)/rhoinf
-         xmom(nstepmax,j,2)=xmom(nstepmax,j,2)/(itotsteps-m3+1)/rhoinf
-         ymom(nstepmax,j,1)=ymom(nstepmax,j,1)/(itotsteps-m3+1)/rhoinf
-         ymom(nstepmax,j,2)=ymom(nstepmax,j,2)/(itotsteps-m3+1)/rhoinf
 
-         zmom(nstepmax,partz,1)=zmom(nstepmax,partz,1)/rhoinf
-         zmom(nstepmax,partz,2)=zmom(nstepmax,partz,2)/rhoinf
-         xmom(nstepmax,partz,1)=xmom(nstepmax,partz,1)/rhoinf
-         xmom(nstepmax,partz,2)=xmom(nstepmax,partz,2)/rhoinf
-         ymom(nstepmax,partz,1)=ymom(nstepmax,partz,1)/rhoinf
-         ymom(nstepmax,partz,2)=ymom(nstepmax,partz,2)/rhoinf
+         zmom(nstepmax,j,1)=zmom(nstepmax,j,1)/rhoinf
+         zmom(nstepmax,j,2)=zmom(nstepmax,j,2)/rhoinf
+         xmom(nstepmax,j,1)=xmom(nstepmax,j,1)/rhoinf
+         xmom(nstepmax,j,2)=xmom(nstepmax,j,2)/rhoinf
+         ymom(nstepmax,j,1)=ymom(nstepmax,j,1)/rhoinf
+         ymom(nstepmax,j,2)=ymom(nstepmax,j,2)/rhoinf
+
+         j=partz
+         
+         zmom(nstepmax,j,1)=zmom(nstepmax,j,1)/rhoinf
+         zmom(nstepmax,j,2)=zmom(nstepmax,j,2)/rhoinf
+         xmom(nstepmax,j,1)=xmom(nstepmax,j,1)/rhoinf
+         xmom(nstepmax,j,2)=xmom(nstepmax,j,2)/rhoinf
+         ymom(nstepmax,j,1)=ymom(nstepmax,j,1)/rhoinf
+         ymom(nstepmax,j,2)=ymom(nstepmax,j,2)/rhoinf
 
          zmomave=zmomave/(itotsteps-m2+1)/(rhoinf)
          fezave=fezave/(itotsteps-m2+1)
@@ -1215,15 +1304,11 @@ c     normalize to rhoinf and the probe area to give normalized flux density
          ymoutvar=ymoutvar/(itotsteps-m2+1)/(rhoinf**2)-ymoutave**2
          epyave=epyave/(itotsteps-m2+1)
 
-         collmomtot(nstepmax)=
-     $        collmomtot(nstepmax)/(itotsteps-m2+1)/rhoinf
          enertot(nstepmax)=
      $        enertot(nstepmax)/(itotsteps-m2+1)/rhoinf
 
          write(*,501)fave
  501     format('Probe flux density=',f8.4)
-         write(*,502)collmomtot(nstepmax)
- 502     format('Momentum coll from infinity=',f8.4)
          write(*,503)enertot(nstepmax)
  503     format('Probe energy flux=',f8.4)
          ztotal1=zmom(nstepmax,fieldz,1)*debyelen**2

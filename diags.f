@@ -46,15 +46,25 @@ c Calculate rhoplot,diagphi,diagrho,rho1theta,rhomidtheta
          nrp=0
       enddo
 
-c Assume the unperturbe region is upstream outside the magnetic shadow      
-      do k=NPSIUSED/2,NPSIUSED
-         do j=NTHUSED/2,3*NTHUSED/4
-            nrp=nrp+1
-            do i=1,nr
+c Assume the unperturbed region is upstream outside the magnetic shadow      
+      do k=1,NPSIUSED
+         do j=1,NTHUSED
+c If upstream (the "*vd" at the end is just to capture vd's sign)
+            if(rcc(nrused)*(cd*tcc(j)+sqrt(1-cd**2)*sqrt(1-tcc(j)**2)
+     $           *sin(pcc(k)))*vd.le.0) then
+c If outside the magnetic shadow
+               if((sqrt(1-cB**2) *tcc(j)-cB *sqrt(1-tcc(j)**2)*sin(pcc(k
+     $              )))**2+(-sqrt(1 -tcc(j)**2)*cos(pcc(k))*sqrt(1-cB**2
+     $              ))**2+(sqrt(1 -tcc(j)**2)*cos(pcc(k))*cB)**2.ge.(2
+     $              /rcc(nrused))**2) then
+                  nrp=nrp+1
+                  do i=1,nr
 c     rhoplot is unnormalized. All others are normalized.
-               rhoplot(i)=rhoplot(i)+rho(i,j,k)
-               phiave(i)=phiave(i)+phi(i,j,k)
-            enddo
+                     rhoplot(i)=rhoplot(i)+rho(i,j,k)
+                     phiave(i)=phiave(i)+phi(i,j,k)
+                  enddo
+               endif
+            endif
          enddo
       enddo
       do i=1,nr
@@ -64,10 +74,10 @@ c     rhoplot is unnormalized. All others are normalized.
      $        phiave(i))/nstepsave
          diagrho(i)=(diagrho(i)*(nstepsave-1) + (rhoplot(i)))/nstepsave
       enddo
-
+      
 c Calculate diagchi (outer potential as a function of nth normalized
 c to the ion thermal velocity)
-c Necessary for the reinjection and fcalc
+c Necessary for the fortran diagnostics
       phiout=0.
       do j=1,NTHUSED
          phitemp=0.
@@ -80,11 +90,15 @@ c Necessary for the reinjection and fcalc
       enddo
       phiout=phiout/NTHUSED
 
-      
+c  Calcualte the averaged data on collected particles
       do k=1,npsiused
          do j=1,nthused
-            fincellave(j,k)=((nstepsave-1)*fincellave(j,k)
-     $        + nincellstep(j,k,istep-1))/nstepsave
+            delta=fincellave(j,k)-nincellstep(j,k,istep-1)
+            fincellave(j,k)=fincellave(j,k)-delta/nstepsave
+            delta=vrincellave(j,k)-vrincellstep(j,k,istep-1)
+            vrincellave(j,k)=vrincellave(j,k)-delta/nstepsave
+            delta=vr2incellave(j,k)-vr2incellstep(j,k,istep-1)
+            vr2incellave(j,k)=vr2incellave(j,k)-delta/nstepsave
          enddo
       enddo
 

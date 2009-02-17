@@ -144,9 +144,10 @@ c Now deal with custom reinject. For example if the neutral velocity is vd,
 c we need to reinject a Maxwellian, not the collisional distribution
          else
             if (bcr.eq.1) then
-c Set averein =0, because we should not consider the potential at the outer
-c boundary for the reinjection
-               averein=0
+c     Set averein =0 when we do not consider the potential at the outer
+c     boundary for the reinjection
+c              averein=0
+               write(*,*) averein
                riest=(nrein/dt) /
      $              (sqrt(Ti)*
      $              smaxflux(vd/sqrt(2.*Ti),(-averein/Ti))
@@ -180,6 +181,7 @@ c Average the flux of particles to the inner, because it's a small number.
       finnerave=(finnerave*(nstepsave-1) + float(ninner))/nstepsave 
 c Use an averaging process to calculate rhoinf (=riave)
       riave=(riave*(nstepsave-1) + riest)/nstepsave 
+
 c      if(myid.eq.0) write(*,'(a,2f9.2,a,i6,f8.1,f8.1)')
 c     $     'riest,riave',riest,riave,
 c     $     '  ninner,finave,adj',ninner,finnerave,

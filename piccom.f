@@ -41,7 +41,7 @@ c CIC definitions
       parameter (LCIC=.true.)
       integer nrsize,nthsize,npsisize
 c These correspond to nrfull, nthfull.and npsifull
-      parameter (nrsize=76,nthsize=31,npsisize=31)
+      parameter (nrsize=126,nthsize=36,npsisize=26)
 c Positions and velocities of particles (6-d phase-space).
       real xp(ndim,npartmax)
       real vzinit(npartmax)
@@ -99,12 +99,25 @@ c The sum of particle xyz-velocities
       real vysum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vzsum(1:nrsize-1,1:nthsize-1,1:npsisize-1)
 
+c Diagnostic sums
+      real pDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vrDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vtDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vpDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vr2Diag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vt2Diag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vp2Diag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vrtDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vrpDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+      real vtpDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
+
 c     Total sum of particle xyz-velocities, i.e. total current curr(4)
 c     is the particle sum
       real curr(4)
 
-      common /momcom/psum,vrsum,vtsum,vpsum,vr2sum,vt2sum,vp2sum
-     $     ,vrtsum,vrpsum,vtpsum,vzsum,vxsum,vysum,curr
+      common /momcom/psum,vrsum,vtsum,vpsum,vr2sum,vt2sum,vp2sum ,vrtsum
+     $     ,vrpsum,vtpsum,vzsum,vxsum,vysum,curr,pDiag,vrDiag,vtDiag
+     $     ,vpDiag,vr2Diag,vt2Diag,vp2Diag ,vrtDiag,vrpDiag,vtpDiag
 c*********************************************************************
 c Radius mesh
       real r(0:nrsize),rcc(0:nrsize)
@@ -130,14 +143,11 @@ c Parallel or serial solving
       logical cgparallel
 c Parallel bloc solver arguments
       integer idim1,idim2,idim3
-c Stencil is the excursion around a given cell for the sound speed
-c averaging (When running with Lambda=0)
-      integer stencil
 
       common /meshcom/r,rcc,th,tcc,thang,volinv,irpre,itpre,rfac,tfac,
      $     pcc,ippre,pfac, hr,zeta,zetahalf,cminus,cmid,cplus ,avelim
      $     ,nr,NRFULL,NRUSED,NPSIFULL,NPSIUSED,nth,npsi,NTHFULL,NTHUSED
-     $     ,cgparallel,idim1,idim2,idim3,stencil
+     $     ,cgparallel,idim1,idim2,idim3
 c********************************************************************
 c Random interpolate data.
       integer nvel,nQth
@@ -181,9 +191,17 @@ c enertot is the reduced enerprobe for each time-step
       real enertot(nstepmax)
 c Number of particles striking probe in theta/psi cell
       real nincellstep(nthsize,npsisize,0:nstepmax)
+      real vrincellstep(nthsize,npsisize,0:nstepmax)
+      real vr2incellstep(nthsize,npsisize,0:nstepmax)
       real nincell(nthsize,npsisize)
-c Sum of zvelocities of particles striking probe.
+      real vrincell(nthsize,npsisize)
+      real vr2incell(nthsize,npsisize)
+c Ave flux
       real fincellave(nthsize,npsisize)
+c Ave radial mom flux
+      real vrincellave(nthsize,npsisize)
+c Ave radial vr2 flux
+      real vr2incellave(nthsize,npsisize)
 c Number of particles reinjected per theta cell.
 c      integer noutrein(nth),ivoutrein(nth)
 c Sum and average of potentials at which particles were reinjected.
@@ -200,10 +218,11 @@ c Cell in which to accumulate distribution functions
       integer ircell,itcell
       common /diagcom/nvdiag,nvdiagave,vdiag,vrange,diagrho,diagphi,
      $     diagchi,phiout,nrein,nreintry,ninner,fluxprobe,nincellstep
-     $     ,nincell, rhoinf,vrdiagin,vtdiagin, spotrein,averein,fluxrein
-     $     ,ntrapre ,adeficit, ircell,itcell,zmout,xmout,ymout,zmomprobe
-     $     ,ymomprobe,xmomprobe,fincellave ,zmom,xmom,ymom,enerprobe
-     $     ,enertot
+     $     ,vrincellstep,vr2incellstep,nincell,vrincell,vr2incell,rhoinf
+     $     ,vrdiagin,vtdiagin, spotrein,averein ,fluxrein ,ntrapre
+     $     ,adeficit, ircell,itcell ,zmout,xmout,ymout ,zmomprobe
+     $     ,ymomprobe,xmomprobe,fincellave ,vrincellave,vr2incellave
+     $     ,zmom,xmom,ymom ,enerprobe ,enertot
 c*********************************************************************
 c Poisson coefficients for iterative solution, etc.
 
@@ -216,8 +235,9 @@ c Poisson coefficients for iterative solution, etc.
       common /poisson/debyelen,vprobe,Ezext,apc,bpc,cpc,dpc,fpc,epc,gpc
 c*********************************************************************
 c Smoothing steps
-      integer nstepsave,nsamax
-      common /stepave/nstepsave,nsamax
+      integer nstepsave,nsamax,diagsamp
+      logical samp
+      common /stepave/nstepsave,nsamax,diagsamp,samp
 c*********************************************************************
 c Orbit plotting storage for tracking the first norbits orbits.
       integer nobsmax,norbits

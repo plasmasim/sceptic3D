@@ -96,6 +96,8 @@ c Velocity and magnetic axis angle sinus
       do j=1,nth
          do k=1,npsi
             nincell(j,k)=0
+            vrincell(j,k)=0
+            vr2incell(j,k)=0
          enddo
       enddo
  
@@ -185,15 +187,11 @@ c Except for the first time, find new position.
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
             
-
 c For acceleration, when dt is changing, use the average of prior and
 c present values: dtnow.
 c               if(dtprec(i).eq.0.)dtprec(i)=dt
 
-
-
             dtnow=0.5*(dt+dtprec(i))
-
 
 c     The first way to deal with E^B drift is with a convective
 c     field. Use an other approach
@@ -352,6 +350,14 @@ c     that the particle left the domain at a random time during the last
 c     time-step.
                dtl=-ran0(idum)*dt
 
+c     Don't need the electrostatic part of the correction, since it
+c     averages to zero (the first dt/2 is to finish the step since
+c     leapfrog is offset half a timestep)
+
+c     do j=4,6
+c         xp(j,i)=xp(j,i)+accel(j-3)*(dt/2+dtl)
+c     enddo
+
                if(Bz.ne.0) then
 
 c     For strong magnetic fields, the convective Efield may be strong.
@@ -359,8 +365,7 @@ c     In order to get accurate force calculations, we must account for
 c     the fact that the particle may have left the domain between 0 and
 c     dt before now. 
                
-               
-
+              
 c     Old verlet integrator here because we only really care about the
 c     magnetic field effect
 
@@ -393,8 +398,7 @@ c Account for the E*B drift (Transform back)
                endif
 
             else
-c I don't know about that (Foo)
-c               dtl=0
+c     Do nothing
             endif
 
             if(rn.le.r(1)) then
@@ -415,8 +419,19 @@ c cos(psi) of collision
 
 c     Compute the ion collection the old way, i.e. full count on the
 c     collection cell
+
+               vxy=xp(4,i)*cpsi + xp(5,i)*spsi
+               vr=vxy*sqrt(1-ctc**2) + xp(6,i)*ctc
+
+c     When the time-step is too large, it can happen that a particle
+c     crosses half the sphere and vr becomes positive. In that rare
+c     case, put vr=abs(vr), otherwise problem in how to calculate the
+c     density on the first radial cells.
+               if(vr.gt.0) vr=-vr
+
                if(.not.collcic) then
-c     Interpolate onto the mesh as in ptomesh               
+c     Interpolate onto the mesh as in ptomesh
+
                   ithc=interpth(ctc,tfc)
                   if(LCIC)then
                      icell=nint(ithc+tfc)
@@ -427,6 +442,8 @@ c     Interpolate onto the mesh as in ptomesh
                   jcell=nint(jpsic+pfc)
                   if(jcell.eq.npsiused+1)jcell=1
                   nincell(icell,jcell)=nincell(icell,jcell)+1
+                  vrincell(icell,jcell)=vrincell(icell,jcell)+vr
+                  vr2incell(icell,jcell)=vr2incell(icell,jcell)+vr**2
 c     Compute the ion collection by linear extrapolation
                else
                   ithc=interpth(ctc,tfc)
@@ -435,11 +452,27 @@ c     Compute the ion collection by linear extrapolation
      $                 +(1-tfc)*(1-pfc)
                   nincell(ithc+1,jpsic)=nincell(ithc+1,jpsic)
      $                 +tfc*(1-pfc)
+                  vrincell(ithc,jpsic)=vrincell(ithc,jpsic)
+     $                 +vr*(1-tfc)*(1-pfc)
+                  vrincell(ithc+1,jpsic)=vrincell(ithc+1,jpsic)
+     $                 +vr*tfc*(1-pfc)
+                  vr2incell(ithc,jpsic)=vr2incell(ithc,jpsic)
+     $                 +vr**2*(1-tfc)*(1-pfc)
+                  vr2incell(ithc+1,jpsic)=vr2incell(ithc+1,jpsic)
+     $                 +vr**2*tfc*(1-pfc)
                   if(jpsic.eq.npsiused)jpsic=0
                   nincell(ithc,jpsic+1)=nincell(ithc,jpsic+1)
      $                 +(1-tfc)*pfc
                   nincell(ithc+1,jpsic+1)=nincell(ithc+1,jpsic+1)
      $                 +tfc*pfc
+                  vrincell(ithc,jpsic+1)=vrincell(ithc,jpsic+1)
+     $                 +vr*(1-tfc)*pfc
+                  vrincell(ithc+1,jpsic+1)=vrincell(ithc+1,jpsic+1)
+     $                 +vr*tfc*pfc
+                  vr2incell(ithc,jpsic+1)=vr2incell(ithc,jpsic+1)
+     $                 +vr**2*(1-tfc)*pfc
+                  vr2incell(ithc+1,jpsic+1)=vr2incell(ithc+1,jpsic+1)
+     $                 +vr**2*tfc*pfc
                endif
 
 c     Collected momentum and energy

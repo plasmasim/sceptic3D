@@ -106,6 +106,23 @@ c All velocities now.
       cp=cos(p)
       sp=sin(p)
 c      write(*,*)ct,st,cp,sp
+
+
+c use averein to reject particles with too low an energy
+c      phihere=averein
+c To avoid issues at low Ti, cap phihere
+c      phihere=max(phihere,-3*Ti)
+      vv2=(vt**2 + vr**2 + vp**2)*vscale**2
+
+c     It is better not to use any acceleration. averein is just used in
+c     rhoinfcalc.
+      phihere=0
+
+c     Reject particles that have too low an energy. forget about the
+c     adiabatic reinjection for now
+      if(.not.vv2.gt.-2.*phihere) goto 2
+
+
 c If velocity is normalized to sqrt(Te/mi), and Ti is Ti/Te really,
 c then a distribution with standard deviation sqrt(Ti/mi) is obtained
 c from the unit variance random distribution multiplied by sqrt(Ti)=vscale.
@@ -129,29 +146,7 @@ c      write(*,*) (xp(iw,i),iw=1,6)
       temp=xp(5,i)
       xp(5,i)=temp*cd+xp(6,i)*sd
       xp(6,i)=-temp*sd+xp(6,i)*cd
-
       
-c      write(*,*) (xp(iw,i),iw=1,6)
-
-c use averein instead of phihere
-      phihere=averein
-
-      vv2=(vt**2 + vr**2 + vp**2)*vscale**2
-      vz2=xp(6,i)**2
-c Reject particles that have too low an energy
-c bcr=1 means isotropic reinjection
-c bcr=2 means adiabatic, so the velocity increase is only on the z direction
-      if (bcr.ne.2) then
-c The angle is chosen by the distribution of injinit, so if fail, keep the same
-         if(.not.vv2.gt.-2.*phihere) goto 2
-      elseif (bcr.eq.2) then
-         if (.not.(vv2.gt.-2*phihere)) goto 2
-c If 3D launch is ok, count in the tries for diags.f
-         nreintry=nreintry+1
-c If Adiabatic launch fails, chose again an angle
-         if(.not.vz2.gt.-2.*phihere) goto 1
-      endif
-
       rcyl=xp(1,i)**2+xp(2,i)**2
       rp=rcyl+xp(3,i)**2
 

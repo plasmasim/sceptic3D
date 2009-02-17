@@ -31,7 +31,7 @@ c     Writes the main output file
 c Common data:
       include 'piccom.f'
       include 'colncom.f'
-      character*35 filename
+      character*45 filename
 c      integer iti,it2
 c Construct a filename that contains many parameters
 c Using the routines in strings_names.f
@@ -63,6 +63,11 @@ c Using the routines in strings_names.f
      
       if(vneutral.ne.0)
      $     call nameappendint(filename,'N',nint(100*vneutral),3)
+
+c Foo
+      call nameappendint(filename,'Nr',nrused,3)
+      call nameappendint(filename,'Nt',nthused,3)
+      call nameappendint(filename,'Np',npsiused,3)
 
       idf=nbcat(filename,'.dat')
 c Write out averaged results.
@@ -131,14 +136,14 @@ c      endif
          write(10,'(a,i4,i4,i4)')'Mesh density/infinity. Grid',NRUSED
      $        ,NTHUSED,NPSIUSED
       do j=1,NRUSED
-         write(10,'(10f8.3)')((rho(j,k,l),k=1,NTHUSED),l=1,NPSIUSED)
+         write(10,'(10f8.3)')((rhoDiag(j,k,l),k=1,NTHUSED),l=1,NPSIUSED)
       enddo
       write(10,'(a,i4,i4)')'Volinv. Grid',NRUSED
       write(10,'(10f8.3)')(volinv(k),k=1,NRUSED)
       write(10,*)'rhoDiag'
-      do j=1,NRUSED
-         write(10,'(10f8.3)')((rhoDiag(j,k,l),k=1,NTHUSED),l=1,NPSIUSED)
-      enddo
+c      do j=1,NRUSED
+c         write(10,'(10f8.3)')((rhoDiag(j,k,l),k=1,NTHUSED),l=1,NPSIUSED)
+c      enddo
 
       call outsums(dt,i+1)
 
@@ -393,45 +398,48 @@ c      open(10,file=filename)
       write(10,'(2f8.5,f8.4,i6,f8.3,f12.3,2f14.5)')
      $     dt,vd,Ti,i,r(nr),rhoinf,debyelen,vprobe
       write(10,*)nrhere,nthhere,npsihere
-      write(10,*)'psum'
-      write(10,*)(((psum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'pDiag'
+      write(10,*)(((pDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vrsum'
-      write(10,*)(((vrsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vrDiag'
+      write(10,*)(((vrDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vtsum'
-      write(10,*)(((vtsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vtDiag'
+      write(10,*)(((vtDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vpsum'
-      write(10,*)(((vpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vpDiag'
+      write(10,*)(((vpDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vr2sum'
-      write(10,*)(((vr2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vr2Diag'
+      write(10,*)(((vr2Diag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vt2sum'
-      write(10,*)(((vt2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vt2Diag'
+      write(10,*)(((vt2Diag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vp2sum'
-      write(10,*)(((vp2sum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vp2Diag'
+      write(10,*)(((vp2Diag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vrtsum'
-      write(10,*)(((vrtsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vrtDiag'
+      write(10,*)(((vrtDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-       write(10,*)'vrpsum'
-      write(10,*)(((vrpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+      write(10,*)'vrpDiag'
+      write(10,*)(((vrpDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-       write(10,*)'vtpsum'
-      write(10,*)(((vtpsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+       write(10,*)'vtpDiag'
+      write(10,*)(((vtpDiag(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
      $     ,npsihere)
-      write(10,*)'vxsum'
-      write(10,*)(((vxsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
-     $     ,npsihere)
-      write(10,*)'vysum'
-      write(10,*)(((vysum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
-     $     ,npsihere)
-      write(10,*)'vzsum'
-      write(10,*)(((vzsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
-     $     ,npsihere)
+
+c Don't save cvx, vy,vzsum
+c      write(10,*)'vxsum'
+c      write(10,*)(((vxsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+c     $     ,npsihere)
+c      write(10,*)'vysum'
+c      write(10,*)(((vysum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+c     $     ,npsihere)
+c      write(10,*)'vzsum'
+c      write(10,*)(((vzsum(k1,k2,k3),k1=1,nrhere),k2=1,nthhere),k3=1
+c     $     ,npsihere)
+
       write(10,*)'r[cc]'
       write(10,*)(rcc(k1),k1=1,nrhere)
       write(10,*)'volinv'

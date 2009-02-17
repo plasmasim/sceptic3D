@@ -89,12 +89,13 @@ c Common defaults. Avoid block data.
       bdyfc=4.
       Ti=1.
       diags=.true.
+      samp=.false.
+      diagsamp=4
       finaldiags=.true.
       ldist=.false.
       avelim=0.6
       lsmoothT=.false.
       lsmoothP=.false.
-      stencil=0.
       lcolcont=.true.
       ircell=1
       itcell=1
@@ -116,7 +117,7 @@ c     artificially to zero
       ieradset=.false.
 
       cgparallel=.false.
-      collcic=.false.
+      collcic=.true.
       maxsteps=500
 
       colnwt=0.
@@ -192,9 +193,7 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
-         if(string(1:3) .eq. '-st') then
-            read(string(4:),*) stencil
-         elseif(string(1:2) .eq. '-s') then
+         if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif
          if(string(1:2) .eq. '-b') read(string(3:),*)bdyfc
@@ -303,10 +302,6 @@ c Set Array sizes, allowed variable.
       NPSIUSED=npsi
       NPSIFULL=npsi+1
 
-c Check stencil
-      if(stencil.ge.0.5*min(npsiused,nthused))then
-         stencil=0.5*min(npsiused,nthused)
-      endif
       
 
       if(.not.ieradset) then
@@ -402,15 +397,13 @@ c Read in the previous particle distribution and averages.
       if(readpart) call partrd(success)
 c Or Initialize (load) particles
       if(.not.success) call pinit()
+
 c Assign charge to mesh
-      call chargetomesh()
-
-      
+      call chargetomesh()      
 c Collect the partial sums of moments of distribution.
-
       call sumreduce()
 
-      call rhocalc(lsmoothT,lsmoothP,i)
+      call rhocalc(lsmoothT,lsmoothP,i,dt)
 
 c Print out diagnostics for tiny meshes.
       if(nr.eq.10) then
@@ -437,7 +430,7 @@ c Save the permanent plot switch.
       
 c Must start nstepsave at 1, not 0
       nstepsave=1
-      nsamax=min(99,maxsteps/10)+1
+      nsamax=min(199,maxsteps/20)+1
       if(success)nstepsave=nsamax
 
 c     Timing
@@ -487,21 +480,33 @@ c     have the following properties.
             enddo
          endif
 
-         
-
+        
          if(i.eq.maxsteps)call pfset(ipfsw)
-c Assign charge to mesh
 
+c Assign charge to mesh
+         
          call chargetomesh()
-                 
+         
 c Collect the partial sums of moments of distribution.
 #ifdef MPI
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 #endif
+      
          call sumreduce()
          call aveupstep()
 
-         
+        
+c     One step prior to when the momenta are needed, set samp=true so
+c     that chargediag calculates them.
+         if(i.ge.(maxsteps-diagsamp*nstepsave)-diagsamp) then
+            if(mod(i-(maxsteps-diagsamp*nstepsave)+diagsamp,diagsamp).eq
+     $           .(diagsamp-1))then
+               samp=.true.
+            else
+               samp=.false.
+            endif
+         endif
+
 c myid.eq.0 for the master node.
          if(myid.eq.0)then
             
@@ -514,12 +519,10 @@ c     Plot density contours.
                else
                   call pltinit(0.,1.,0.,1.)
                endif
-            endif
-           
-            call rhocalc(lsmoothT,lsmoothP,i)
-          
+            endif            
+            call rhocalc(lsmoothT,lsmoothP,i,dt)
          endif
-
+         
 #ifdef MPI
 c     Broadcast back to the slaves.
          if (cgparallel) then
@@ -594,21 +597,6 @@ c     SCEPTIC2D uses the potential at the current time step.
             endif
             write(*,'(i5,$)')i
          endif
-
-
-c Foo
-         
-         do i3=0,npsiused+1
-            do i2=0,nthused+1
-               do i1=1,nrused
-c                  rho(i1,i2,i3)=1.
-c-phi(i1,i2,i3)
-c+exp(phi(i1,i2,i3))
-cexp(-phi(i1,i2,i3))
-               enddo
-            enddo
-         enddo
-
 c     Calculate the potential field, unless it is fixed.
       if (myid2.eq.0.and.infdbl) then
          call fcalc_infdbl(dt)
@@ -624,8 +612,8 @@ c     Calculate the potential field, unless it is fixed.
             
 #endif
          endif
-      endif
-      
+      endif  
+
 c     Broadcast back to the slaves.
 #ifdef MPI
          call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
@@ -673,9 +661,10 @@ c     default we also evaluate at the probe surface
           
          endif
 
-
 c     Main particle advance, including collisions.
+
          call padvnc(dt,icolntype,colnwt,i,ierad)
+
 
 c     Reduce back the flux and distribution data from the particle advance.
          call partreduce(i)
@@ -812,7 +801,6 @@ c Help section
       write(*,*)' --localinj use local potential for injection.',
      $     ' --smooth symmetrize in angle.'
       write(*,*)' -cd.ff drift velocity cosine, -cB.ff Mag field cosine'
-      write(*,*)' -st.ff(0) stencil for cs calculation'
       write(*,*)' --rhoinf.ff specify constant injection rate, rather',
      $     ' than particle number.'
       write(*,*)' --sp use parallel bloc solver, '
@@ -832,7 +820,7 @@ c End of Main Program.
 c***********************************************************************
 
 c Calculate rho from the psum.
-      subroutine rhocalc(lsmoothT,lsmoothP,i)
+      subroutine rhocalc(lsmoothT,lsmoothP,i,dt)
 
 c If lsmooth, then symmetrize the density, by averaging.
       logical lsmoothT,lsmoothP
@@ -850,9 +838,6 @@ c Initialize rhoinf approximately:
          rhoinf=numprocs*npart/(4.*pi*r(NRUSED)**3/3.)
          write(*,*)'Rhoinf in rhocalc approximated as',rhoinf
       endif
-
-c Correction for --ds
-
       do ipsi=1,NPSIUSED
          do ith=1,NTHUSED
             do ir=1,NRUSED
@@ -870,9 +855,9 @@ c     write(*,*)'Rhocalc fixup: zero particles in cell',ir,ith,ipsi
       enddo
       do ipsi=1,NPSIUSED
          do ir=1,NRUSED
-c Fix the theta boundaries. The extra small quantity prevents zeros, I hope.
-            rho(ir,1,ipsi)=2.*rho(ir,1,ipsi)+1.e-4
-            rho(ir,nthused,ipsi)=2.*rho(ir,nthused,ipsi)+1.e-4
+c Fix the theta boundaries
+            rho(ir,1,ipsi)=2.*rho(ir,1,ipsi)
+            rho(ir,nthused,ipsi)=2.*rho(ir,nthused,ipsi)
 
 c     Smoothing in theta angle
             if(lsmoothT) then
@@ -903,37 +888,72 @@ c     Smoothing in psi angle
          enddo
       endif
          
-      
       if(debyelen.eq.0)then
 c     Section to fix probe boundary bias arising from use of half a cell
 c     in a region where there is strong gradient.
-c     Not correct for large lambda. Because the
-c     density can be increasing, not decreasing.
          do ipsi=1,npsi
             do ith=1,nth
-c     rho(1,ith)=rho(1,ith)/(1.+(2./3.)*sqrt(r(2)-r(1)))
-               rho(1,ith,ipsi)=rho(1,ith,ipsi)/(1.+0.75*sqrt(r(2)-r(1)))
+c     Old way
+c     rho(1,ith,ipsi)=rho(1,ith,ipsi)/(1.+0.66*sqrt(r(2)-r(1)))
+               
+               vs=vrincellave(ith,ipsi)/(1e-6+fincellave(ith,ipsi))
+               fluxofangle=fincellave(ith,ipsi)*(nth-1)*npsi/(4*pi
+     $              *dt*r(1)**2)
+               if(vs.lt.0) then
+                  rho(1,ith,ipsi)=-fluxofangle/(vs*rhoinf)+1e-6
+                  if(ith.eq.1.or.ith.eq.nth) then
+                     rho(1,ith,ipsi)=2*rho(1,ith,ipsi)
+                  endif
+               endif
             enddo
          enddo
       endif
-
+         
 c     Storing the averaged diagnostic density.  Because densities at
 c     following time-steps are correlated, just save every 4
 c     time-steps. This in effect multiplies by 4 the length of
 c     averaging.
 
-      if(mod(i,4).eq.1)then
-         do i3=1,npsiused
-            do i2=1,nthused
-               do i1=1,nrused
-                  rhoDiag(i1,i2,i3)=(rhoDiag(i1,i2,i3)*(nstepsave-1)
-     $                 +rho(i1,i2,i3))/nstepsave              
+      if(i.ge.maxsteps-diagsamp*nstepsave) then
+
+         if(mod(i-(maxsteps-diagsamp*nstepsave),diagsamp).eq.0)then 
+c     past=0 for its first calculation. This complicated averaging
+c     simply ensures that at the end, every rho at each time step has
+c     equal weight
+            past=1.*(i-maxsteps)/diagsamp+nstepsave
+
+            do i3=1,npsiused
+               do i2=1,nthused
+                  do i1=1,nrused
+
+                     rhoDiag(i1,i2,i3)=(rhoDiag(i1,i2,i3)*past +rho(i1
+     $                    ,i2,i3))/(past+1)
+                     pDiag(i1,i2,i3)=(pDiag(i1,i2,i3)*past +psum(i1,i2
+     $                    ,i3))/(past+1)
+                     vrDiag(i1,i2,i3)=(vrDiag(i1,i2,i3)*past +vrsum(i1
+     $                    ,i2,i3))/(past+1)
+                     vtDiag(i1,i2,i3)=(vtDiag(i1,i2,i3)*past +vtsum(i1
+     $                    ,i2,i3))/(past+1)
+                     vpDiag(i1,i2,i3)=(vpDiag(i1,i2,i3)*past +vpsum(i1
+     $                    ,i2,i3))/(past+1)
+                     vr2Diag(i1,i2,i3)=(vr2Diag(i1,i2,i3)*past
+     $                    +vr2sum(i1,i2,i3))/(past+1)
+                     vt2Diag(i1,i2,i3)=(vt2Diag(i1,i2,i3)*past
+     $                    +vt2sum(i1,i2,i3))/(past+1)
+                     vp2Diag(i1,i2,i3)=(vp2Diag(i1,i2,i3)*past
+     $                    +vp2sum(i1,i2,i3))/(past+1)
+                     vrtDiag(i1,i2,i3)=(vrtDiag(i1,i2,i3)*past
+     $                    +vrtsum(i1,i2,i3))/(past+1)
+                     vrpDiag(i1,i2,i3)=(vrpDiag(i1,i2,i3)*past
+     $                    +vrpsum(i1,i2,i3))/(past+1)
+                     vtpDiag(i1,i2,i3)=(vtpDiag(i1,i2,i3)*past
+     $                    +vtpsum(i1,i2,i3))/(past+1)
+                     
+                  enddo
                enddo
             enddo
-         enddo
+         endif
       endif
-      
-      
 
       end
  
@@ -986,6 +1006,7 @@ c     the sound speed at the probe edge, needed only in the zero debye
 c     length case. vpsum and vtsum are needed for the Lorentz force
 c     calculation
 
+
       if(diags) then
 c         write(*,*) vxsum,vysum,vzsum
          call MPI_REDUCE(vxsum,vxtot,(nrsize-1)*(nthsize-1)*npsiused
@@ -996,15 +1017,16 @@ c         write(*,*) vxsum,vysum,vzsum
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
       endif
 
-      if(diags.or.debyelen.eq.0) then
+
+      if(diags.or.samp.or.debyelen.eq.0) then
          call MPI_REDUCE(vrsum,vrtot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(vr2sum,vr2tot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
       endif
 
-      if(diags)then
 
+      if(diags.or.samp)then
          call MPI_REDUCE(vpsum,vptot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(vtsum,vttot,(nrsize-1)*(nthsize-1)*npsiused
@@ -1018,9 +1040,7 @@ c         write(*,*) vxsum,vysum,vzsum
          call MPI_REDUCE(vrpsum,vrptot,(nrsize-1)*(nthsize-1)*npsiused
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(vtpsum,vtptot,(nrsize-1)*(nthsize-1)*npsiused
-     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-         
-         
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)        
       endif
       if(myid.eq.0)then
 
@@ -1035,8 +1055,8 @@ c         write(*,*) vxsum,vysum,vzsum
                enddo
             enddo
          enddo
-         
-         if(diags.or.debyelen.eq.0) then
+
+         if(diags.or.samp.or.debyelen.eq.0) then
             do i3=1,npsiused
                do i2=1,nthused
                   do i1=1,nrused
@@ -1057,7 +1077,7 @@ c         write(*,*) vxsum,vysum,vzsum
                enddo
             enddo
          endif
-         if(diags)then
+         if(diags.or.samp)then
             do i3=1,npsiused
                do i2=1,nthused
                   do i1=1,nrused
@@ -1095,6 +1115,10 @@ c***********************************************************************
          call MPI_REDUCE(ninner,nintot,1,MPI_INTEGER,MPI_SUM,0,
      $        MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(nincell,nincellstep(1,1,i),nthsize*npsisize
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vrincell,vrincellstep(1,1,i),nthsize*npsisize
+     $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vr2incell,vr2incellstep(1,1,i),nthsize*npsisize
      $        ,MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          call MPI_REDUCE(zmomprobe,zmom(i,partz,1),1,MPI_REAL,MPI_SUM,0,
      $        MPI_COMM_WORLD,ierr)
@@ -1145,6 +1169,8 @@ c This shuffle is necessary to accommodate the reduce.
          do j=1,nth
             do k=1,npsi
                nincellstep(j,k,i)=nincell(j,k)
+               vrincellstep(j,k,i)=vrincell(j,k)
+               vr2incellstep(j,k,i)=vr2incell(j,k)
             enddo
          enddo
          zmom(i,partz,1)=zmomprobe

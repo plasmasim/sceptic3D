@@ -57,7 +57,7 @@ c     cache issues
          enddo
       endif
 c Split the zeroying when diags is on, maybe faster with cache ??
-      if(diags) then
+      if(diags.or.samp) then
          do k=1,npsiused
             do j=1,nthused
                do i=1,nrused
@@ -145,7 +145,7 @@ c Charge summation.
 c     calculate the sums only if needed, i.e. at the probe edge if Lde=0
 c     or if we plot the diagrams (i.e. not -g)
 
-      if(diags.or.(debyelen.eq.0.and.irl.le.2)) then
+      if(diags.or.samp.or.(debyelen.eq.0.and.irl.le.2)) then
 
       vxy=xp(4,i)*cp + xp(5,i)*sp
       vr=vxy*st + xp(6,i)*ct
@@ -188,7 +188,7 @@ c     or if we plot the diagrams (i.e. not -g)
 
       endif
 
-      if(diags) then
+      if(diags.or.samp) then
 
       vt= vxy*ct - xp(6,i)*st
 
@@ -228,8 +228,6 @@ c     or if we plot the diagrams (i.e. not -g)
      $     (1.-rf)*thf*pf*vp
       vpsum(irl+1,ithl+1,iplp)=vpsum(irl+1,ithl+1,iplp) + 
      $     rf*thf*pf*vp
-
-  
 
       vt2=vt*vt
 
@@ -326,6 +324,9 @@ c     or if we plot the diagrams (i.e. not -g)
       vtpsum(irl+1,ithl+1,iplp)=vtpsum(irl+1,ithl+1,iplp) + 
      $     rf*thf*pf*vtp
 
+      endif
+
+      if(diags)then
 
       vx=xp(4,i)
       vxsum(irl,ithl,ipl)=vxsum(irl,ithl,ipl) + 
@@ -397,31 +398,65 @@ c      real phi1ave
       real bcifac,bcpfac,bci,bcp,bvf
       real relax
       real cs(nthsize,npsisize),csd(nthsize,npsisize)
+      real vs,vsd(nthsize,npsisize)
+      real psum_r(2,nthsize,npsisize)
+      real vrsum_r(2,nthsize,npsisize)
+      real vr2sum_r(2,nthsize,npsisize)
       real ncs
       logical first
       integer kk1,kk2
       data relax/1./
-      data bcifac/.2/bcpfac/.1/
+c Reduced with respect to 2D
+      data bcifac/.05/bcpfac/.025/
       data bvf/1.2071/
       data first/.true./
       data phi0mphi1/ntot*0./
       data delphi0/ntot*0./
       data ncs/50./
+      real dr
       save
       cerr=0.
 
+      dr=rcc(2)-rcc(1)
+
+c Calculate the potential on the grid according to phi=log(rho)
       do k=1,npsiused
          do j=1,nthused
-            do i=1,nrused
+            relax=1.
+            do i=3,nrused
                if(rho(i,j,k).le.0.)then
                   write(*,*)'rho=0',i,j,k
                   stop
                endif
-c Simplistic Boltzmann scheme. May need relaxation.
+c Relaxed Boltzmann scheme.
                delta=phi(i,j,k)-log(rho(i,j,k))
                if(abs(delta).le.cerr)cerr=abs(delta)
                phi(i,j,k)=phi(i,j,k)-relax*delta
             enddo
+
+            do i=1,2
+               if(rho(i,j,k).le.0.)then
+                  write(*,*)'rho=0',i,j,k
+                  stop
+               endif
+               relax=1.               
+c Relaxed Boltzmann scheme.
+               delta=phi(i,j,k)-log(rho(i,j,k))
+               if(abs(delta).le.cerr)cerr=abs(delta)
+               phi(i,j,k)=phi(i,j,k)-relax*delta
+               
+c want at least 40 particles for average, and relax<0.25
+               relax=(40/psum(i,j,k)-1)*dr/sqrt(1+Ti)/dt
+               relax=1/max(4,relax)
+
+               delta=psum_r(i,j,k)-psum(i,j,k)
+               psum_r(i,j,k)=psum_r(i,j,k)-relax*delta
+               delta=vrsum_r(i,j,k)-vrsum(i,j,k)
+               vrsum_r(i,j,k)=vrsum_r(i,j,k)-relax*delta
+               delta=vr2sum_r(i,j,k)-vr2sum(i,j,k)
+               vr2sum_r(i,j,k)=vr2sum_r(i,j,k)-relax*delta
+            enddo
+
          enddo
       enddo
 
@@ -434,97 +469,127 @@ c Probe boundary condition.
          enddo
          first=.false.
       endif
-c      write(*,*)'p1,p2,v1,v2,csd,cs,vs,phi0,phi1,delphinew'
-c      write(*,*)'cs=',(cs(kk),kk=1,nth)
       do j=1,nthused
          do k=1,npsiused
-            p1=0.
-            v1=0.
-            s1=0.
-            p2=0.
-            v2=0.
-            s2=0.
-            do l=-stencil,stencil
-               ja=j+l
-               if(ja.le.0.or.ja.ge.nthused+1) ja=j
-               do m=-stencil,stencil
-                  ka=k+m
-                  if(ka.le.0) then
-                     ka=npsiused+ka
-                  elseif(ka.ge.npsiused+1) then
-                     ka=ka-npsiused
-                  endif
-                  p1=p1+vr2sum(1,ja,ka)-vrsum(1,ja,ka)**2/(psum(1,ja,ka)
-     $                 +1e-5)
-                  v1=v1+vrsum(1,ja,ka)
-                  s1=s1+psum(1,ja,ka)
-                  p2=p2+vr2sum(2,ja,ka)-vrsum(2,ja,ka)**2/(psum(2,ja,ka)
-     $                 +1e-5)
-                  v2=v2+vrsum(2,ja,ka)
-                  s2=s2+psum(2,ja,ka)
-               enddo
-            enddo
 
-            if(p1.ne.0)then
-               if(s2.gt.0)then
-                  p1=p1
-                  v1=v1/s1
-               else
-                  write(*,*)'s1=0'
-                  stop
-               endif
+
+c     calculate the exact density at the sheath edge at this precise
+c     time-step. Indeed, the sheath density calculated in rhocalc is at
+c     the previous step.
+            vs=vrincellave(j,k)/(1e-6+fincellave(j,k))
+            fluxofangle=fincellave(j,k)*(nthused-1)*npsiused/(4*pi
+     $           *dt*r(1)**2)
+            if(fluxofangle.ne.0) then
+               s0=-fluxofangle/vs
+               rho(0,j,k)=s0/rhoinf
+               if(j.eq.1.or.j.eq.nthused) rho(0,j,k)=2*rho(0,j,k)
+               rho(1,j,k)=rho(0,j,k)
+               s0=s0/((nthused-1)*npsiused)
+               p0=((vr2incellave(j,k)*fincellave(j,k)-vrincellave(j,k)
+     $              **2)/(fincellave(j,k)**2))*s0
+            else
+               s0=0
+               p0=0
             endif
+            
+
+c            s1=psum_r(1,j,k)
+c            p1=vr2sum_r(1,j,k)*s1-vrsum_r(1,j,k)**2
+            s2=psum_r(2,j,k)
+            p2=vr2sum_r(2,j,k)*s2-vrsum_r(2,j,k)**2
+
+c            if(p1.ne.0)then
+c               if(s1.gt.0)then
+c                  p1=(p1/s1)*volinv(1)
+c                  v1=vrsum(1,j,k)/(psum(1,j,k)+1e-6)
+c                  s1=s1*volinv(1)
+c               else
+c                  write(*,*)'s1=0'
+c                  stop
+c               endif
+c            endif
             if(p2.ne.0)then
                if(s2.gt.0)then
-                  p2=p2
-                  v2=v2/s2
+                  p2=(p2/s2)*volinv(2)
+                  v2=vrsum(2,j,k)/(psum(2,j,k)+1e-6)
+                  s2=s2*volinv(2)
                else
                   write(*,*)'s2=0'
                   stop
                endif
             endif
-            vs=(1.+bvf)*v1-bvf*v2
-c Fix the psum difference so it can't be zero.
-c Original derivative form
-            csd(j,k)=(p2 - p1)/(s2-s1+.5)+1.
 
-c Gamma Ti form with gamma=3.
-c         csd(j)=3.*p1/(psum(1,j)+.5) + 1.
-            if(csd(j,k).lt.0.)csd(j,k)=0.
+c Old way
+c            vs=(1.+bvf)*v1-bvf*v2
+c            csd(j,k)=(p2 - p1)/(s2-s1)+1.
+
+c New way
+            vs=vrincellave(j,k)/(1e-6+fincellave(j,k))
+            csd(j,k)=(p2 - p0)/(s2-s0)+1.
+
+c     There is a strong sensitivity issue when s1~s2. So use the fact
+c     that cs must be larger than csiso, and smaller than csadia (gamma
+c     is between 1 (isotherm) and 3 (1D adiabatic))
+            csiso=p0/(s0+1e-6) + 1.
+            csadia=3.*p0/(s0+1e-6) + 1.     
+            if(csd(j,k).lt.csiso)then
+               csd(j,k)=csiso
+            elseif(csd(j,k).gt.csadia)then
+               csd(j,k)=csadia
+            elseif(abs(s1-s0).le.1e-6)then
+               csd(j,k)=0.5*(csio+csadia)
+            endif
+               
             csd(j,k)=-sqrt(csd(j,k))
-c Clip the excursion symmetrically.
+
+c     Clip the excursion symmetrically. (Be careful that if csd ever
+c     goes to zero, it will stay to zero forever)
             if(csd(j,k).lt.2.*cs(j,k))  csd(j,k)=2.*cs(j,k)
+
 c Average the sound-speed value over ncs steps.
             cs(j,k)=((ncs-1.)*cs(j,k)+csd(j,k))/ncs
             if(cs(j,k).gt.0)then
                write(*,*)'cs positive',j,cs(j,k),csd(j,k)
-     $              ,p1,p2,psum(1,j,k),psum(2,j,k),ncs
+     $              ,p0,p2,psum(1,j,k),psum(2,j,k),ncs
                stop
             endif
-            bci=-bcifac*cs(j,k)**2*dt/(r(2)-r(1))
-            bcp=-bcpfac*(r(2)-r(1))/(dt*cs(j,k))
+
+c I am not sure I understand the cs**2 (except to put the sign back to positive
+            bci=-bcifac*cs(j,k)**2*dt/dr
+            bcp=-bcpfac*dr/(dt*cs(j,k))
             delphinew=(vs - cs(j,k))*bci
-            phi(0,j,k)=phi(1,j,k)+phi0mphi1(j,k)+delphinew+
-     $           (delphinew-delphi0(j,k))*bcp
-            delphi0(j,k)=delphinew
+
+            phidrop=phi0mphi1(j,k)+delphinew +(delphinew -delphi0(j,k))
+     $           *bcp
+
+            phi(0,j,k)=phi(1,j,k)+phidrop
+
 c     The following line says that the artificial potential of the first
 c     cell can not be higher than what is calculated using
-c     log(rho). Hence sometimes, the potential plot at rcc=1 is capped
-c     at log(rho(rcc=1)). Physically, this is because if the velocity is
-c     already higher than the sound speed, Bohm condition is already
-c     satisfied
-            if(phi(0,j,k).gt.phi(1,j,k))phi(0,j,k)=phi(1,j,k)
-            phi0mphi1(j,k)=phi(0,j,k)-phi(1,j,k)
-c         write(*,'(10f8.3)')p1,p2,v1,v2,csd(j),cs(j),vs,
-c     $        phi(0,j),phi(1,j),delphinew
-c Adjusting the potential of the first cell.
+c     log(rho). Hence sometimes (almost always in fact), the
+c     potential plot at rcc=1 is capped at log(rho(rcc=1)).
 
-            phi(1,j,k)=phi(0,j,k)
-            if(.not.abs(phi(1,j,k)).lt.1.e20)then
-               write(*,*)'phi1 overflow', phi(1,j,k),bcp,cs(j,k),ncs
-     $              ,delphinew ,p1,p2,psum(1,j,k),psum(2,j,k),csd(j,k)
-               stop
+c     Physically, this is because if the velocity is already higher than
+c     the sound speed, Bohm condition is already satisfied
+            if(phidrop.gt.0)then
+               phi(0,j,k)=phi(0,j,k)-phidrop
             endif
+
+            
+c     the sheath entrance potential must be bounded negatively,
+c     otherwise in the trailing with E*B field we can get accel
+c     overflow. Physically, there is no reason for the sheath potential
+c     to be much more negative than ~-(Te+Ek_inf+|vd*Bz|*rp)
+            if(phi(0,j,k).le.-3*(1+0.5*vd**2+abs(vd*Bz)))then
+               phi(0,j,k)=-3*(1+0.5*vd**2+abs(vd*Bz))
+            endif
+
+            delphi0(j,k)=delphinew
+            phi0mphi1(j,k)=phi(0,j,k)-phi(1,j,k)
+
+c Adjusting the potential of the first cell.
+            phi(1,j,k)=phi(0,j,k)
+
          enddo
       enddo
 
@@ -573,6 +638,7 @@ c Set the theta shadow cells to their proper value to ensure periodicity
       enddo
 
 
+
 c      write(*,*)'At end cs=',(cs(kk),kk=1,nth)
 c      write(*,'(10f7.4)')((phi(i,ih),i=0,9),ih=0,9)
       cerr=1.
@@ -601,7 +667,7 @@ c Radial, Theta and Phi accelerations
       integer ipl,ith
       integer il,ir,ithp1,ithp2,ithm1,ilm1
       integer iplp1,iplp2,iplm1
-      real rlm1,rf,tf,pf,rr,rl,dpsi
+      real rlm1,rf,tf,pf,rr,rl,dpsi,tflin
 
       real philm1tt,philm1pt,philm1tp,philm1pp
       real philm1t,philm1p
@@ -621,6 +687,8 @@ c Radial, Theta and Phi accelerations
 
       real phih1t,phih1p,phih1m,phih12
       real phih1tX,phih1pX,phih1mX,phih12X
+
+      real sinhere,sinplus
 
       data dp/0./
 
@@ -678,11 +746,16 @@ c     Weighted in the psi direction
       phih1m=phih1mp*pf+phih1mt*(1-pf)
       phih12=phih12p*pf+phih12t*(1-pf)
 
-c     Theta weighting
-      phih1tX=phih1pt*tf +phih1tt*(1-tf)
-      phih1pX=phih1pp*tf +phih1tp*(1-tf)
-      phih1mX=phih1pm*tf +phih1tm*(1-tf)
-      phih12X=phih1p2*tf +phih1t2*(1-tf)
+c     Theta weighting tf is the fractional theta position interpolated
+c     linearly in cos(theta). But to calculate ap correctly (in
+c     particular close to the axis), we need tflin, fractional theta
+c     position interpolated linearly in theta.
+      tflin=(acos(ct)-thang(ith))/(thang(ith+1)-thang(ith))
+
+      phih1tX=phih1pt*tflin +phih1tt*(1-tflin)
+      phih1pX=phih1pp*tflin +phih1tp*(1-tflin)
+      phih1mX=phih1pm*tflin +phih1tm*(1-tflin)
+      phih12X=phih1p2*tflin +phih1t2*(1-tflin)
 
 
 c Potentials at i=ih=il+1 for neighboring theta and psi
@@ -732,10 +805,10 @@ c     already weighted in the psi direction
       phihp12=phihp12p*pf+phihp12t*(1-pf)
 
 c     Theta weighting
-      phihp1tX=phihp1pt*tf +phihp1tt*(1-tf)
-      phihp1pX=phihp1pp*tf +phihp1tp*(1-tf)
-      phihp1mX=phihp1pm*tf +phihp1tm*(1-tf)
-      phihp12X=phihp1p2*tf +phihp1t2*(1-tf)
+      phihp1tX=phihp1pt*tflin +phihp1tt*(1-tflin)
+      phihp1pX=phihp1pp*tflin +phihp1tp*(1-tflin)
+      phihp1mX=phihp1pm*tflin +phihp1tm*(1-tflin)
+      phihp12X=phihp1p2*tflin +phihp1t2*(1-tflin)
 
 
 
@@ -770,10 +843,10 @@ c Uniform interpolation of d\phi/d\zeta times 1/\zeta
          if(zetap.le.1.e-2)zetap=1.e-2
          ar=(  ( (phihp1t-phih1t)/(zeta(ir)-zeta(ih))*hf +
      $        (phih1t-philm1t)/(zeta(ih)-zeta(ilm1))*(1.-hf)
-     $           )*(1.-tf)
+     $           )*(1.-tflin)
      $        +( (phihp1p-phih1p)/(zeta(ir)-zeta(ih))*hf +
      $        (phih1p-philm1p)/(zeta(ih)-zeta(ilm1))*(1.-hf)
-     $         )*tf )/zetap
+     $         )*tflin )/zetap
       else
 c Interpolate in r.
          philm1tt=phi(ilm1,ith,ipl)
@@ -787,10 +860,10 @@ c     Psi weighting
 
          ar=(  ( (phihp1t-phih1t)/(rr-rl)*hf +
      $        (phih1t-philm1t)/(rl-rlm1)*(1.-hf)
-     $           )*(1.-tf)
+     $           )*(1.-tflin)
      $        +( (phihp1p-phih1p)/(rr-rl)*hf +
      $        (phih1p-philm1p)/(rl-rlm1)*(1.-hf)
-     $         )*tf )
+     $         )*tflin )
 
       endif
 
@@ -806,23 +879,23 @@ c     In sceptic2D, we always divide by rl. It think it is wrong. One
 c     should divide by rl or rr depending on the radius at which the
 c     potential derivative is calculated
 
-      if(tf.le.0.5)then
-         at= ( (phih1p-phih1t)*(tf)*2.
+      if(tflin.le.0.5)then
+         at= ( (phih1p-phih1t)*(tflin)*2.
      $          /(rl*(thang(ithp1)-thang(ith)))
-     $        +(phih1p-phih1m)*(0.5-tf)*2.
+     $        +(phih1p-phih1m)*(0.5-tflin)*2.
      $          /(rl*(thang(ithp1)-thang(ithm1))) ) * (1.-rf)
-     $        + ( (phihp1p-phihp1t)*(tf)*2.
+     $        + ( (phihp1p-phihp1t)*(tflin)*2.
      $          /(rr*(thang(ithp1)-thang(ith)))
-     $        +(phihp1p-phihp1m)*(0.5-tf)*2.
+     $        +(phihp1p-phihp1m)*(0.5-tflin)*2.
      $          /(rr*(thang(ithp1)-thang(ithm1))) ) * rf
       else
-         at= ( (phih12-phih1t)*(tf-0.5)*2.
+         at= ( (phih12-phih1t)*(tflin-0.5)*2.
      $          /(rl*(thang(ithp2)-thang(ith)))
-     $        +(phih1p-phih1t)*(1.-tf)*2.
+     $        +(phih1p-phih1t)*(1.-tflin)*2.
      $          /(rl*(thang(ithp1)-thang(ith))) ) * (1.-rf)
-     $        + ( (phihp12-phihp1t)*(tf-0.5)*2.
+     $        + ( (phihp12-phihp1t)*(tflin-0.5)*2.
      $          /(rr*(thang(ithp2)-thang(ith)))
-     $        +(phihp1p-phihp1t)*(1.-tf)*2.
+     $        +(phihp1p-phihp1t)*(1.-tflin)*2.
      $          /(rr*(thang(ithp1)-thang(ith))) ) * rf
       endif
 
@@ -851,7 +924,7 @@ c Uniform Psi spacing
 c     divide by dpsi*st, because dl=r*sin(theta)*dpsi, and r has already
 c     been taken into account in the previous ap calculation. The minus
 c     sign is because E=-grad(phi)
-      ap=-ap/(dpsi*st+1e-6)
+      ap=-ap/(st*dpsi+1e-7)
       if(lap0)ap=0.
 
  501  format(a,6f10.4)
@@ -875,7 +948,7 @@ c Trap errors.
          write(*,*) 'zeta '
          write(*,*) zeta(ilm1),zeta(ih),zeta(ir)
          write(*,'(10f7.4)')((phi(i,ih,ipl),i=1,10),ih=1,10)
-         stop
+c         stop
       endif
       end
 c***********************************************************************
@@ -1064,8 +1137,8 @@ c     E=-gradPhi
             eth=-0.5*(phi(k,j+1,l)+phi(k,j+1,l+1)-phi(k,j,l)-phi(k,j,l+1
      $           ))
 
-         epsi1=-(phi(k,j,l+1)-phi(k,j,l))/(sqrt(1-tcc(j)**2)+1e-6)
-         epsi2=-(phi(k,j+1,l+1)-phi(k,j+1,l))/(sqrt(1-tcc(j+1)**2)+1e-6)
+         epsi1=-(phi(k,j,l+1)-phi(k,j,l))/(sqrt(1-tcc(j)**2)+1e-7)
+         epsi2=-(phi(k,j+1,l+1)-phi(k,j+1,l))/(sqrt(1-tcc(j+1)**2)+1e-7)
 c     Assume (assumes epsi=a+b*theta) epsi is actually dphi/dpsi/sin(theta)
 c            epsi=(epsi1*thang(j+1)-epsi2*thang(j))/(thang(j+1)-thang(j))
 c     $           +(epsi1-epsi2)/((thang(j+1)-thang(j))*(th(j+1)-th(j)))

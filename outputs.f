@@ -31,7 +31,7 @@ c     Writes the main output file
 c Common data:
       include 'piccom.f'
       include 'colncom.f'
-      character*45 filename
+      character*55 filename
 c      integer iti,it2
 c Construct a filename that contains many parameters
 c Using the routines in strings_names.f
@@ -64,10 +64,10 @@ c Using the routines in strings_names.f
       if(vneutral.ne.0)
      $     call nameappendint(filename,'N',nint(100*vneutral),3)
 
-c Foo
-      call nameappendint(filename,'Nr',nrused,3)
-      call nameappendint(filename,'Nt',nthused,3)
-      call nameappendint(filename,'Np',npsiused,3)
+c Turn those on when we test convergence with changing grid size
+c      call nameappendint(filename,'Nr',nrused,3)
+c      call nameappendint(filename,'Nt',nthused,3)
+c      call nameappendint(filename,'Np',npsiused,3)
 
       idf=nbcat(filename,'.dat')
 c Write out averaged results.
@@ -97,6 +97,8 @@ c -log(rhoinf)
       do j=1,NTHUSED
          do k=1,NPSIUSED
             nincell(j,k)=0
+            vrincell(j,k)=0
+            vr2incell(j,k)=0
          enddo
       enddo
       nastep=0
@@ -110,6 +112,8 @@ c     Just save the last quarter for the average
             do j=1,NTHUSED
                do l=1,NPSIUSED
                   nincell(j,l)=nincell(j,l)+nincellstep(j,l,k)
+                  vrincell(j,l)=vrincell(j,l)+vrincellstep(j,l,k)
+                  vr2incell(j,l)=vr2incell(j,l)+vr2incellstep(j,l,k)
                enddo
             enddo
          endif
@@ -118,6 +122,12 @@ c     Just save the last quarter for the average
      $     ,' quarter of steps, numbering:'
       write(10,*)nastep
       write(10,*)((nincell(j,l),j=1,NTHUSED),l=1,NPSIUSED)
+      write(10,'(a,a)')'Particle angular distrib*vr summed over last'
+     $     ,' quarter of steps, numbering:'
+      write(10,*)((vrincell(j,l),j=1,NTHUSED),l=1,NPSIUSED)
+      write(10,'(a,a)')'Particle angular distrib*vr^2 summed over last'
+     $     ,' quarter of steps, numbering:'
+      write(10,*)((vr2incell(j,l),j=1,NTHUSED),l=1,NPSIUSED)
 
       write(10,'(a,i4,i4,i4)')'Mesh potential. Grid',NRUSED,NTHUSED
      $     ,NPSIUSED

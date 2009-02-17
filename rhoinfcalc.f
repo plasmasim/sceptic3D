@@ -147,7 +147,6 @@ c we need to reinject a Maxwellian, not the collisional distribution
 c     Set averein =0 when we do not consider the potential at the outer
 c     boundary for the reinjection
 c              averein=0
-               write(*,*) averein
                riest=(nrein/dt) /
      $              (sqrt(Ti)*
      $              smaxflux(vd/sqrt(2.*Ti),(-averein/Ti))

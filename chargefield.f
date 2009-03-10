@@ -536,7 +536,7 @@ c     is between 1 (isotherm) and 3 (1D adiabatic))
                csd(j,k)=csiso
             elseif(csd(j,k).gt.csadia)then
                csd(j,k)=csadia
-            elseif(abs(s1-s0).le.1e-6)then
+            elseif(abs(s2-s0).le.1e-6)then
                csd(j,k)=0.5*(csio+csadia)
             endif
                

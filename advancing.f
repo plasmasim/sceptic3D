@@ -125,6 +125,7 @@ c     Here we do need half quantities.
             call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,sp,cp,rp
      $           ,zetap,ih,hf)
 
+            
 c .................... Subcycle Loop .................
             remdt=dtin
             ic=0
@@ -140,8 +141,9 @@ c  We decide the level of subcycling.
             if(lsubcycle) then
                isubcycle=r(nrfull)/rp
 c          if(mod(i,1000).eq.0) write(*,'(i1,$)')isubcycle
-               dts=dtin/isubcycle*1.00001
 
+               dts=dtin/isubcycle*1.00001
+               
             endif
 
 c If prior step was ended by a collision, restart the particle velocity.
@@ -180,13 +182,16 @@ c Except for the first time, find new position.
             if(ic.ne.1)then 
                ih=1
                hf=77.
+
+               
                
                call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,
      $              sp,cp,rp,zetap,ih,hf)
             endif            
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
-            
+
+
 c For acceleration, when dt is changing, use the average of prior and
 c present values: dtnow.
 c               if(dtprec(i).eq.0.)dtprec(i)=dt
@@ -337,7 +342,22 @@ c Position advance
                v2=v2+xp(j+3,i)**2
             enddo
            
+c The time prior to step end of closest approach
+            tm=xdv/v2
             rn=sqrt(rn2)
+
+c The following does not make a difference almost)
+
+c  Test if we went through the probe and came back out.
+            if((0..lt.tm .and. tm.lt.dt .and.
+     $           (rn2 - tm**2*v2).lt.rp2))then
+c For a long time this had an error: used  tm**2/v2 erroneously. 
+c Corrected 9 Apr 07.
+               if(rn.gt.r(1))then
+c     write(*,*)'Through probe',tm,(rn2 - tm**2*v2)
+                  rn=0.
+               endif
+            endif
 
 c-----------------------------------------------------------------               
 c Handling boundaries :
@@ -402,6 +422,7 @@ c     Do nothing
             endif
 
             if(rn.le.r(1)) then
+
                ninner=ninner+1
 
 c Collision point
@@ -493,9 +514,14 @@ c     Did not leave the grid. Jump to subcycle end.
             else
                goto 81
             endif
+
+
 c We left. If we haven't exhausted complement, restart particle i.
             if(nrein.lt.ninjcomp) then
+
+
                call reinject(i,dtin,icolntype,bcr)
+
                ipf(i)=1
                zmout=zmout+xp(6,i)
                xmout=xmout+xp(4,i)
@@ -528,7 +554,6 @@ c     Call the timestep fraction-remaining random.
 c     Try to use the real remaining time for remdt (remember dtl is negative)
 c     I think it's wrong
 c               remdt=remdt+dtl
-
 
 
 c     Jump to subcycle end.
@@ -931,6 +956,8 @@ c*******************************************************************
       integer imin,kk1,kk2
       imin=1.
 c      call innerbc(imin,dt)
+
+
       do i=1,NRUSED
          do j=1,NTHUSED
             do k=1,NPSIUSED
@@ -955,8 +982,8 @@ c Set the theta shadow cells to their proper value to ensure periodicity
             phi(i,j,0)=phi(i,j,npsiused)
          enddo
       enddo
-      
-      write(*,'($)')" "
+c There seems to be a problem on Loki with the following expression
+c      write(*,'($)')" "
 
       end
 

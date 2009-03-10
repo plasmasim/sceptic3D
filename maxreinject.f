@@ -71,6 +71,7 @@ c Quick fixing to prevent some errors
 c         write(*,*) yy,nrein
          yy=1-1e-6
       endif
+
 c Pick normal velocity from cumulative G.
       call invtfunc(Gcom(1,ic1),nvel,yy,v1)
       call invtfunc(Gcom(1,ic2),nvel,yy,v2)
@@ -101,6 +102,7 @@ c Theta and phi velocities are (shifted) Maxwellians but we are working
 c in units of vti.
       vt=gasdev(idum)- st*vdi
       vp=gasdev(idum)
+
 c All velocities now.
       p=2.*pi*ran0(idum)
       cp=cos(p)
@@ -153,6 +155,7 @@ c      write(*,*) (xp(iw,i),iw=1,6)
 c Do the outer flux accumulation.
       spotrein=spotrein+phihere
       nrein=nrein+1
+
 
 c Direct ic1 usage
       end
@@ -215,6 +218,7 @@ c Now Gcom(*,i) is the cumulative distribution of radial velocity at cos(Qth)
 c normalized to the ion thermal velocity, not sqrt(T_e/m_i).
 c And Qcom() is the cumulative distribution in cosine angles Qth
 c      work(1,1)=' '
+
      
  501  format(a,11f8.4)
       idum=4

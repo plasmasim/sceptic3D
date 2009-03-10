@@ -320,7 +320,7 @@ c parameters
 c         write(*,*)'Command line and defaults:'
          write(*,505)nr,nth,npsi,npart,Bz
          write(*,502)debyelen,Ti,maxsteps,dtf,rmax,vd,vprobe
- 505     format(' Mesh: ',i3,' x',i3,' x',i3,'  Particles:',i7,' Bz:',f4
+ 505     format(' Mesh: ',i3,' x',i3,' x',i3,'  Particles:',i7,' Bz:',f6
      $        .2)
  502     format('l_d=',f10.3,' Ti=',f7.3,' Steps=',i4,
      $        ' dt=',f6.4,' rmax=',f5.1,' vd=',f6.3,' vp=',f8.4)
@@ -396,14 +396,20 @@ c Initialize collisions and related fields.
 c Read in the previous particle distribution and averages.
       if(readpart) call partrd(success)
 c Or Initialize (load) particles
-      if(.not.success) call pinit()
+      
 
+      if(.not.success) call pinit()
+c Need to reset i to avoid problems at RhoDiag ... initialization
+      i=0
+      samp=.true.
 c Assign charge to mesh
       call chargetomesh()      
 c Collect the partial sums of moments of distribution.
       call sumreduce()
 
       call rhocalc(lsmoothT,lsmoothP,i,dt)
+c Don't forget to put back samp to false.
+      samp=.false.
 
 c Print out diagnostics for tiny meshes.
       if(nr.eq.10) then
@@ -450,8 +456,9 @@ c Plot at some subset of steps.
 c         write(*,*)mod(i-1,ipstep),i,ipstep
          lplot=lpstore.and.(mod(i-1,ipstep).eq.0)
 c Acceleration for first 1/3rd of steps.
-         bdtnow=max(1.,(bdt-1.)*(maccel-i+2)/(maccel+1.)+1.)
-c         bdtnow=max(1.,bdt*(maccel-i)/(maccel-1.))
+c The following two expressions are sensibly similar
+c        bdtnow=max(1.,(bdt-1.)*(maccel-i+2)/(maccel+1.)+1.)
+         bdtnow=max(1.,bdt*(maccel-i)/(maccel-1.))
          dt=bdtnow*dtf
 c         write(*,*) colnwt,Eneutral
 c         write(*,*)'bdtnow,btd,maccel,dt,dtf=',bdtnow,bdt,maccel,dt,dtf
@@ -480,13 +487,10 @@ c     have the following properties.
             enddo
          endif
 
-        
          if(i.eq.maxsteps)call pfset(ipfsw)
 
 c Assign charge to mesh
-         
          call chargetomesh()
-         
 c Collect the partial sums of moments of distribution.
 #ifdef MPI
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -888,14 +892,11 @@ c     Smoothing in psi angle
          enddo
       endif
          
-      if(debyelen.eq.0)then
-c     Section to fix probe boundary bias arising from use of half a cell
-c     in a region where there is strong gradient.
+c     If vs<0 (which is always the case unless there is exceptional
+c     noise), get the density at r=1 by dividing the ion flux by the
+c     average velocity
          do ipsi=1,npsi
             do ith=1,nth
-c     Old way
-c     rho(1,ith,ipsi)=rho(1,ith,ipsi)/(1.+0.66*sqrt(r(2)-r(1)))
-               
                vs=vrincellave(ith,ipsi)/(1e-6+fincellave(ith,ipsi))
                fluxofangle=fincellave(ith,ipsi)*(nth-1)*npsi/(4*pi
      $              *dt*r(1)**2)
@@ -907,7 +908,6 @@ c     rho(1,ith,ipsi)=rho(1,ith,ipsi)/(1.+0.66*sqrt(r(2)-r(1)))
                endif
             enddo
          enddo
-      endif
          
 c     Storing the averaged diagnostic density.  Because densities at
 c     following time-steps are correlated, just save every 4
@@ -915,13 +915,11 @@ c     time-steps. This in effect multiplies by 4 the length of
 c     averaging.
 
       if(i.ge.maxsteps-diagsamp*nstepsave) then
-
          if(mod(i-(maxsteps-diagsamp*nstepsave),diagsamp).eq.0)then 
 c     past=0 for its first calculation. This complicated averaging
 c     simply ensures that at the end, every rho at each time step has
 c     equal weight
             past=1.*(i-maxsteps)/diagsamp+nstepsave
-
             do i3=1,npsiused
                do i2=1,nthused
                   do i1=1,nrused

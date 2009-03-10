@@ -45,8 +45,11 @@ c This allows us to restart with nstepsave .ne. 1 if rhoinf is set.
       if(nrein .gt. 0) then
 c Combination equivalent to phihere usage.
 c The following statement requires us to call this routine after 
-c (part at least of) chargediag has been done. 
+c (part at least of) chargediag has been done.
+
+c Foo. Just for now 
          averein=diagphi(NRUSED)
+c         averein=log(diagrho(NRUSED))
 
          if(averein.gt.0.5*Ti)then
 c This is necessary to prevent smaxflux errors. smaxflux is not correct

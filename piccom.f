@@ -41,7 +41,7 @@ c CIC definitions
       parameter (LCIC=.true.)
       integer nrsize,nthsize,npsisize
 c These correspond to nrfull, nthfull.and npsifull
-      parameter (nrsize=126,nthsize=36,npsisize=26)
+      parameter (nrsize=126,nthsize=31,npsisize=31)
 c Positions and velocities of particles (6-d phase-space).
       real xp(ndim,npartmax)
       real vzinit(npartmax)

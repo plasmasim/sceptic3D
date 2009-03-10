@@ -231,12 +231,12 @@ c     If we are not in the plasma region, try again.
          xp(6,i)=tisq*gasdev(idum) + vd*cd
    
 
-         if(istrapped(i).eq.1)then
-            ntrapped=ntrapped+1
+c         if(istrapped(i).eq.1)then
+c            ntrapped=ntrapped+1
 c If this goto is included then trapped particles are rejected.
 c But that tends to deplete the region close to the probe.
-            goto 1
-         endif
+c            goto 1
+c         endif
 c         if(bcr.eq.2) then
 c     Remove particles with too low vz
 c            if (istrapped2(i)) then

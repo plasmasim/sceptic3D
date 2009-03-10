@@ -68,7 +68,7 @@ c     rhoplot is unnormalized. All others are normalized.
          enddo
       enddo
       do i=1,nr
-         rhoplot(i)=rhoplot(i)*rhoinf/nrp
+         rhoplot(i)=rhoplot(i)/nrp
          phiave(i)=phiave(i)/nrp
          diagphi(i)=(diagphi(i)*(nstepsave-1)+
      $        phiave(i))/nstepsave

@@ -4,10 +4,11 @@ c***********************************************************************
       DATA ISET/0/
       IF (ISET.EQ.0) THEN
  1       continue
-         V1=2.*RANd()-1.
-         V2=2.*RANd()-1.
-c         V1=2.*RAN0(idum)-1.
-c         V2=2.*RAN0(idum)-1.
+c Version of Feb 09. changed back to ran0
+c         V1=2.*RANd()-1.
+c         V2=2.*RANd()-1.
+         V1=2.*RAN0(idum)-1.
+         V2=2.*RAN0(idum)-1.
         R=V1**2+V2**2
         IF(R.GE.1..OR.R.EQ.0.)GO TO 1
         FAC=SQRT(-2.*LOG(R)/R)

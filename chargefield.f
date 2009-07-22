@@ -447,7 +447,7 @@ c Relaxed Boltzmann scheme.
                
 c want at least 40 particles for average, and relax<0.25
                relax=(40/psum(i,j,k)-1)*dr/sqrt(1+Ti)/dt
-               relax=1/max(4,relax)
+               relax=1/max(4.,relax)
 
                delta=psum_r(i,j,k)-psum(i,j,k)
                psum_r(i,j,k)=psum_r(i,j,k)-relax*delta
@@ -1087,7 +1087,7 @@ c     periodicity
                phiherepp2=0.5*(phi(k+2,j+1,l)+phi(k+2,j+1,l+1))
 
                er1=-(rkp*rkp*(phiherep1-phihere1)*(1+.5)- .5
-     $              *rkp2*rkp2*(phiherepp1-phiherep1))/delr              
+     $              *rkp2*rkp2*(phiherepp1-phiherep1))/delr
                er2=-(rkp*rkp*(phiherep2-phihere2)*(1+.5)- .5
      $              *rkp2*rkp2*(phiherepp2-phiherep2))/delr
                
@@ -1101,7 +1101,7 @@ c New version (assumes er=a+b*theta)
                
             elseif(k.eq.nrused)then
                phiherem1=0.5*(phi(k-1,j,l)+phi(k-1,j,l+1))
-               phiherem2=0.5*(phi(k-1,j+1,l)+phi(k-1,j+1,l+1))              
+               phiherem2=0.5*(phi(k-1,j+1,l)+phi(k-1,j+1,l+1))
                phiheremm1=0.5*(phi(k-2,j,l)+phi(k-2,j,l+1))
                phiheremm2=0.5*(phi(k-2,j+1,l)+phi(k-2,j+1,l+1))
 

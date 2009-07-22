@@ -18,7 +18,7 @@ LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11
 
 #Default No Warnings
 ifeq ("$(NOWARN)","")
-	NOWARN=""
+	NOWARN=
 endif
 
 COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
@@ -102,6 +102,7 @@ clean :
 	rm -f *.html
 	rm -f Orbits.txt
 	rm -f *~
+	rm -f makefile
 
 cleanall :
 	make clean

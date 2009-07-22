@@ -1,6 +1,9 @@
 #!/bin/bash
 # Configure script for SCEPTIC.
 
+
+UNUSEDLAB=-Wno-unused-labels
+
 # Compiler choice.
 if [ .$COMPILER == . ] ; then
 if [ -x "`which mpif77`" ] ; then
@@ -11,9 +14,9 @@ if [ -x "`which mpif77`" ] ; then
    if [ -n "`$COMPILER --version | grep GNU`" ] ; then
        echo changing compile switches
        if [ -n "`$COMPILER -show | grep g77`" ] ; then
-	   NW="-Wno-globals -Wno-unused-labels"
+	   NW=$UNUSEDLAB
        else
-	   NW=" -Wno-unused-labels"
+	   NW=
        fi
    else
        NW=$(NOWARN)
@@ -23,13 +26,13 @@ else
    if [ -x "`which gfortran`" ] ; then
       echo choosing compiler gfortran
       COMPILER=gfortran
-      NW=" -Wno-unused-labels"
+      NW=
    else
 	if [ -x "`which g77`" ] ; then
 	    echo choosing compiler g77
 	    COMPILER=g77
 	    echo changing compile switches
-	    NW="-Wno-globals -Wno-unused-labels"
+	    NW=$UNUSEDLAB
 	else
 	    COMPILER=$G77
      	fi

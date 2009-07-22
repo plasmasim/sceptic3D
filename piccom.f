@@ -30,7 +30,7 @@ c___________________________________________________________________________
       integer npartmax,npart,nr,nth,npsi,ndim,np
 c Number of particles: npartmax, radial and theta mesh size: nr, nth.
 c Don't change anything else.
-      parameter (npartmax=200000,np=1,ndim=6)
+      parameter (npartmax=400000,np=1,ndim=6)
 c Use of particle advance subcycling in inner regions for accuracy.
       logical lsubcycle
 c Integrator type. True=old, False=new symplectic schemes
@@ -41,7 +41,7 @@ c CIC definitions
       parameter (LCIC=.true.)
       integer nrsize,nthsize,npsisize
 c These correspond to nrfull, nthfull.and npsifull
-      parameter (nrsize=126,nthsize=31,npsisize=31)
+      parameter (nrsize=206,nthsize=41,npsisize=41)
 c Positions and velocities of particles (6-d phase-space).
       real xp(ndim,npartmax)
       real vzinit(npartmax)
@@ -196,6 +196,8 @@ c Number of particles striking probe in theta/psi cell
       real nincell(nthsize,npsisize)
       real vrincell(nthsize,npsisize)
       real vr2incell(nthsize,npsisize)
+c Impose the bohm condition or not
+      logical bohm
 c Ave flux
       real fincellave(nthsize,npsisize)
 c Ave radial mom flux
@@ -222,7 +224,7 @@ c Cell in which to accumulate distribution functions
      $     ,vrdiagin,vtdiagin, spotrein,averein ,fluxrein ,ntrapre
      $     ,adeficit, ircell,itcell ,zmout,xmout,ymout ,zmomprobe
      $     ,ymomprobe,xmomprobe,fincellave ,vrincellave,vr2incellave
-     $     ,zmom,xmom,ymom ,enerprobe ,enertot
+     $     ,zmom,xmom,ymom ,enerprobe ,enertot, bohm
 c*********************************************************************
 c Poisson coefficients for iterative solution, etc.
 

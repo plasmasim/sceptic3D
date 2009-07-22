@@ -147,13 +147,18 @@ c Now deal with custom reinject. For example if the neutral velocity is vd,
 c we need to reinject a Maxwellian, not the collisional distribution
          else
             if (bcr.eq.1) then
-c     Set averein =0 when we do not consider the potential at the outer
-c     boundary for the reinjection
-c              averein=0
+c     Set averein =0 if we do not want to consider the potential at the
+c     outer boundary for the reinjection. In fact with bcr1, only rhoinf
+c     is influenced by averein, not the reinjection distribution
+c     function which is the Maxwellian from maxreinject.
+
+c     averein=0
+
                riest=(nrein/dt) /
      $              (sqrt(Ti)*
      $              smaxflux(vd/sqrt(2.*Ti),(-averein/Ti))
      $              *r(NRUSED)**2 )
+
             elseif (bcr.eq.2) then
                riest=(nreintry/dt) /
      $              (sqrt(Ti)*

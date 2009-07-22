@@ -46,17 +46,22 @@ c Calculate rhoplot,diagphi,diagrho,rho1theta,rhomidtheta
          nrp=0
       enddo
 
+
 c Assume the unperturbed region is upstream outside the magnetic shadow      
       do k=1,NPSIUSED
          do j=1,NTHUSED
-c If upstream (the "*vd" at the end is just to capture vd's sign)
-            if(rcc(nrused)*(cd*tcc(j)+sqrt(1-cd**2)*sqrt(1-tcc(j)**2)
-     $           *sin(pcc(k)))*vd.le.0) then
-c If outside the magnetic shadow
-               if((sqrt(1-cB**2) *tcc(j)-cB *sqrt(1-tcc(j)**2)*sin(pcc(k
-     $              )))**2+(-sqrt(1 -tcc(j)**2)*cos(pcc(k))*sqrt(1-cB**2
-     $              ))**2+(sqrt(1 -tcc(j)**2)*cos(pcc(k))*cB)**2.ge.(2
-     $              /rcc(nrused))**2) then
+
+c     If (very, i.e. in the first 0.25% of the domain) upstream (the
+c     "*vd" at the end is just to capture vd's sign)
+            if((cd*tcc(j)+sqrt(1-cd**2)*sqrt(1-tcc(j)**2)*sin(pcc(k)))
+     $           *(vd+1e-7)/(abs(vd)+1e-7).le.-0.5) then
+
+c      If outside the magnetic shadow (the term (0.5)**2 means that we
+c      consider the magnetic shadow to be rcc(nrused)/2)
+               if(Bz.eq.0.or.((sqrt(1-cB**2) *tcc(j)-cB *sqrt(1-tcc(j)
+     $              **2)*sin(pcc(k)))**2+(-sqrt(1-tcc(j)**2) *cos(pcc(k)
+     $              )*sqrt(1 -cB**2))**2+(sqrt(1-tcc(j)**2) *cos(pcc(k))
+     $              *cB)**2.ge.(0.5)**2)) then
                   nrp=nrp+1
                   do i=1,nr
 c     rhoplot is unnormalized. All others are normalized.
@@ -74,7 +79,7 @@ c     rhoplot is unnormalized. All others are normalized.
      $        phiave(i))/nstepsave
          diagrho(i)=(diagrho(i)*(nstepsave-1) + (rhoplot(i)))/nstepsave
       enddo
-      
+
 c Calculate diagchi (outer potential as a function of nth normalized
 c to the ion thermal velocity)
 c Necessary for the fortran diagnostics

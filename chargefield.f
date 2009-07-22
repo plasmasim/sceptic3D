@@ -447,7 +447,7 @@ c Relaxed Boltzmann scheme.
                
 c want at least 40 particles for average, and relax<0.25
                relax=(40/psum(i,j,k)-1)*dr/sqrt(1+Ti)/dt
-               relax=1/max(4.,relax)
+               relax=1/max(4,relax)
 
                delta=psum_r(i,j,k)-psum(i,j,k)
                psum_r(i,j,k)=psum_r(i,j,k)-relax*delta
@@ -469,10 +469,14 @@ c Probe boundary condition.
          enddo
          first=.false.
       endif
+
+
+c If we impose the bohm condition
+      if(bohm) then
+
+
       do j=1,nthused
          do k=1,npsiused
-
-
 c     calculate the exact density at the sheath edge at this precise
 c     time-step. Indeed, the sheath density calculated in rhocalc is at
 c     the previous step.
@@ -593,6 +597,7 @@ c Adjusting the potential of the first cell.
          enddo
       enddo
 
+      endif
 
 c     We must average the potential of each psi-cell at theta=0 or
 c     theta=pi. The boundary conditions assume the cell center is on
@@ -821,11 +826,21 @@ c Here we control whether we use the zeta or r interpolation.
       if(debyelen.lt.1.e-2)then
 c Linear approx to sqrt form at boundary.
          if(ih.eq.1)then
-c            rr=r(ir)
-            philm1tt=phi(il,ith,ipl)-bdyfc*sqrt(2.*(rr-rl))*0.25
-            philm1pt=phi(il,ithp1,ipl)-bdyfc*sqrt(2.*(rr-rl))*0.25
-            philm1tp=phi(il,ith,iplp1)-bdyfc*sqrt(2.*(rr-rl))*0.25
-            philm1pp=phi(il,ithp1,iplp1)-bdyfc*sqrt(2.*(rr-rl))*0.25
+
+c This is the way it was done in SCEPTIC2D. I don't like the arbirary bdyfc
+c            philm1tt=phi(il,ith,ipl)-bdyfc*sqrt(2.*(rr-rl))*0.25
+c            philm1pt=phi(il,ithp1,ipl)-bdyfc*sqrt(2.*(rr-rl))*0.25
+c            philm1tp=phi(il,ith,iplp1)-bdyfc*sqrt(2.*(rr-rl))*0.25
+c            philm1pp=phi(il,ithp1,iplp1)-bdyfc*sqrt(2.*(rr-rl))*0.25
+
+c     Instead, mirror phi(2,j,k). We can not use phi(0,j,k) because in
+c     the quasineutral regime, it represents a dummy variable used in
+c     fcalc.
+            philm1tt=2*phi(il,ith,ipl)-phi(ir,ith,ipl)
+            philm1pt=2*phi(il,ithp1,ipl)-phi(ir,ithp1,ipl)
+            philm1tp=2*phi(il,ith,iplp1)-phi(ir,ith,iplp1)
+            philm1pp=2*phi(il,ithp1,iplp1)-phi(ir,ithp1,iplp1)
+
             rlm1=2.*rl - rr
 c     Constant slope
          else

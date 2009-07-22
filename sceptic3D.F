@@ -130,13 +130,16 @@ c     artificially to zero
       vneutral=0.
 c     bcphi : BC on potential
       bcphi=0
-c     bcr : BC on reinjection
+c     bcr : BC on reinjection 1 by default. In fact sofar I have only
+c     set up bcr1 to work on SCEPTIC3D. This corresponds to a standard
+c     drifting Maxwellian reinjection.
       bcr=1
       Bz=0.
       infdbl=.false.
       orbinit=.false.
       lsubcycle=.false.
       verlet=.false.
+      bohm=.false.
 c Signal that fvcom is not initialized. After initialization it is .ne.0
       qthfv(nthfvsize)=0.
 
@@ -187,6 +190,8 @@ c restore defaults on read error.
          endif
          if(string(1:4) .eq. '--bz') then 
             read(string(5:),*)Bz
+         elseif(string(1:5) .eq. '-bohm') then 
+            bohm=.true.
          endif
 #ifdef MPI
          if(string(1:4) .eq. '--sp') then
@@ -408,6 +413,7 @@ c Collect the partial sums of moments of distribution.
       call sumreduce()
 
       call rhocalc(lsmoothT,lsmoothP,i,dt)
+
 c Don't forget to put back samp to false.
       samp=.false.
 
@@ -491,6 +497,7 @@ c     have the following properties.
 
 c Assign charge to mesh
          call chargetomesh()
+
 c Collect the partial sums of moments of distribution.
 #ifdef MPI
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -665,9 +672,10 @@ c     default we also evaluate at the probe surface
           
          endif
 
-c     Main particle advance, including collisions.
 
-         call padvnc(dt,icolntype,colnwt,i,ierad)
+c     Main particle advance, including collisions.
+         
+         call padvnc(dt,icolntype,colnwt,i,maccel,ierad)
 
 
 c     Reduce back the flux and distribution data from the particle advance.
@@ -815,7 +823,8 @@ c Help section
       write(*,*)' --bcr(0) BC reinject (0:spherical sym, 1: Simple',
      $     'Maxwellian, 2: Adiabatic)'
       write(*,*)' --subcyc use step subcycling near probe.'
-      write(*,*) ' -ver Old verlet integrator.'
+      write(*,*)' -ver Old verlet integrator.',  
+     $     '-bohm Impose Bohm condition when LDe=0.'
 
       end
 

@@ -27,9 +27,9 @@ c___________________________________________________________________________
 
 
 c Advance the particles
-      subroutine padvnc(dtin,icolntype,colnwt,step,ierad)
+      subroutine padvnc(dtin,icolntype,colnwt,step,maccel,ierad)
 
-      integer step
+      integer step,maccel
       real dt,dtin
 c Common data:
       include 'piccom.f'
@@ -41,6 +41,7 @@ c Common data:
 c temp data:
       real temp
       integer idum
+      integer isubcycle
       logical lcollide,lcstep
       real ctc,spsi,cpsi,rad,sd,sB
 
@@ -139,7 +140,15 @@ c Steps may be shortened by subcycling and collisions.
 c  Now we know where we are in radius rp. 
 c  We decide the level of subcycling.
             if(lsubcycle) then
-               isubcycle=r(nrfull)/rp
+
+c This seems not to be useful
+c               if(step.gt.maccel)then
+c Require the time-step to be smaller than 10% of the Larmor period
+c                  isubcycle=max(r(nrfull)/rp,dtin/(0.628/(Bz+1e-6)))
+c               else
+                  isubcycle=r(nrfull)/rp
+c               endif
+
 c          if(mod(i,1000).eq.0) write(*,'(i1,$)')isubcycle
 
                dts=dtin/isubcycle*1.00001
@@ -157,6 +166,7 @@ c     x by half a time step properly.
                dtprec(i)=0
             endif
             dt=min(dts,remdt)
+
             if(lcollide .and. mod(i,icycle).eq.ichoose)then
 c Here we calculate the time to next collision: cdt
 c Based on random number draw and poisson distribution.
@@ -369,6 +379,8 @@ c     Rewind time to get the right velocities at the domain exit. Assume
 c     that the particle left the domain at a random time during the last
 c     time-step.
                dtl=-ran0(idum)*dt
+
+
 
 c     Don't need the electrostatic part of the correction, since it
 c     averages to zero (the first dt/2 is to finish the step since
@@ -957,8 +969,8 @@ c*******************************************************************
       imin=1.
 c      call innerbc(imin,dt)
 
+      do i=0,NRUSED
 
-      do i=1,NRUSED
          do j=1,NTHUSED
             do k=1,NPSIUSED
                phi(i,j,k)=vprobe/rcc(i)*exp(-(rcc(i)-rcc(1))/debyelen)
@@ -976,7 +988,7 @@ c      call innerbc(imin,dt)
          enddo
       enddo
 c Set the theta shadow cells to their proper value to ensure periodicity
-      do i=1,nrused
+      do i=0,nrused
          do j=0,nthused+1
             phi(i,j,npsiused+1)=phi(i,j,1)
             phi(i,j,0)=phi(i,j,npsiused)

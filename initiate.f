@@ -280,7 +280,7 @@ c     (potential straightforwardly obtained by poisson's equation
       do k=0,NPSIFULL
          do j=0,NTHFULL
             phi(0,j,k)=vprobe
-            do i=1,NRFULL
+            do i=0,NRFULL
 c     Debye Huckel initialization.
                phi(i,j,k)=vprobe*r(1)/r(i)*exp(-(r(i)-r(1))/decay)
 c     Initialize phizaxis

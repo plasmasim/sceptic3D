@@ -30,7 +30,7 @@ c___________________________________________________________________________
 
 c     Creates a new communicator, cg_comm, who contains a subset of
 c     MPI_COMM_WORLD, because we don't need all the processes for the
-c     bloc SOR
+c     bloc CG (Conjugate gradient)
 
 c     Not to be confused with mpicommcart, which is a reorganisation of
 c     cg_comm
@@ -39,7 +39,11 @@ c     myid2 is the process id in the new communicator. If myid2 is negative,
 c     the process does not belong to the communicator
 
       integer myid2,nproccg
-      integer members(0:100)
+
+c     Make sure the size is large enough when using many
+c     processors. With Loki, can't be larger than 512.
+      integer members(0:511)
+
       integer group_world,cg_group,cg_comm
 
 

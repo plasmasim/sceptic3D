@@ -276,17 +276,67 @@ c     (potential straightforwardly obtained by poisson's equation
       include 'piccom.f'
       real decay
       
-      decay=max(debyelen,0.01)/sqrt(1+1/(Ti+vd**2))
-      do k=0,NPSIFULL
-         do j=0,NTHFULL
-            phi(0,j,k)=vprobe
-            do i=0,NRFULL
+c     When the simulation starts, the ion density is uniform, so start
+c     with a Debye Huckel form only accounting for the electron response
+      decay=debyelen
+c max(debyelen,0.01)/sqrt(1+1/(Ti+vd**2))
+
+      sB=sqrt(1-cB**2)
+      sd=sqrt(1-cd**2)
+      Exext=-vd*Bz*(cB*sd-sB*cd)
+        
+      do k=1,npsiused
+         do j=1,nthused
+            do i=1,nrused
 c     Debye Huckel initialization.
                phi(i,j,k)=vprobe*r(1)/r(i)*exp(-(r(i)-r(1))/decay)
-c     Initialize phizaxis
-               if(j.eq.1) phiaxis(i,1,k)=phi(i,j,k)
-               if(j.eq.nthused) phiaxis(i,2,k)=phi(i,j,k)
+     $              +Exext*cos(pcc(k))*sqrt(1-tcc(j)**2)* (r(1)/r(i))**2
+     $              *((r(i)+decay)/(1+decay))*exp(-(r(i)-r(1))/decay)
             enddo
+            phi(0,j,k)=2.5*phi(1,j,k)-2*phi(2,j,k)+0.5*phi(3,j,k)
+         enddo
+      enddo
+
+c     We must average the potential of each psi-cell at theta=0 or
+c     theta=pi. The boundary conditions assume the cell center is on
+c     axis, while what is indeed calculated is the potential at the
+c     center of the first/last theta-cells.
+
+      do i=0,nrused
+         psiave1=0.
+         psiave2=0.
+         do k=1,npsiused
+            psiave1=psiave1+phi(i,1,k)
+            psiave2=psiave2+phi(i,nthused,k)
+         enddo
+         psiave1=psiave1/npsiused
+         psiave2=psiave2/npsiused
+         do k=1,npsiused
+            phiaxis(i,1,k)=phi(i,1,k)
+            phiaxis(i,2,k)=phi(i,nthused,k)
+            phi(i,1,k)=psiave1
+            phi(i,nthused,k)=psiave2
+         enddo
+      enddo
+
+c We must set the potential of the shadow theta-cells to the
+c physical value of the potential at psi+pi. The zero-derivative
+c condition is not valid anymore in the 3D case
+      do k=1,npsiused
+         kk1=mod(k+3*npsi/2-1,npsi)+1
+         kk2=mod(k+(3*npsi+1)/2-1,npsi)+1
+         do i=0,nrused
+            phi(i,0,k)=0.5*(phi(i,2,kk1)+phi(i,2,kk2))
+            phi(i,nthused+1,k)=
+     $           0.5*(phi(i,nthused-1,kk1)+phi(i,nthused-1,kk2))
+         enddo
+      enddo
+         
+c Set the psi shadow cells to their proper value to ensure periodicity
+      do j=0,nthused+1
+         do i=0,nrused
+            phi(i,j,npsiused+1)=phi(i,j,1)
+            phi(i,j,0)=phi(i,j,npsiused)
          enddo
       enddo
 

@@ -669,6 +669,7 @@ c Radial, Theta and Phi accelerations
       real zetap,hf
       integer ih
       real dp,dth,dpinv,dthinv
+      integer ii,jj
       integer ipl,ith
       integer il,ir,ithp1,ithp2,ithm1,ilm1
       integer iplp1,iplp2,iplm1
@@ -817,7 +818,6 @@ c     Theta weighting
 
 
 
-
 c------------------------------
 c Deal with radial acceleration
 c -----------------------------
@@ -936,6 +936,8 @@ c Uniform Psi spacing
      $        -0.5)*2./rr +(phihp1pX-phihp1tX)*(1.-pf)*2./rr ) * rf
       endif
 
+
+
 c     divide by dpsi*st, because dl=r*sin(theta)*dpsi, and r has already
 c     been taken into account in the previous ap calculation. The minus
 c     sign is because E=-grad(phi)
@@ -951,20 +953,24 @@ c 3D acceleration
       accel(1)=(ar*st+ at*ct)*cp-ap*sp
 c Trap errors.
 
-
-      if(.not.accel(1).lt.1.e5)then
+      if(.not.abs(accel(1)).lt.1.e5)then
          write(*,*) 'i: ',i,' x: ',xp(1,i),' y: ',xp(2,i),' z: ',xp(3,i)
          write(*,*)'Accel Excessive: ar,at,ap,ct,sp,cp,'
          write(*,*) ar,at,ap,ct,sp,cp
          write(*,*) 'phi at ith and ithp1:'
-         write(*,*) philm1t,phi(ih,ith,ipl),phihp1t
-         write(*,*) philm1p,phi(ih,ithp1,ipl),phihp1p
+         write(*,*) philm1t,phih1t,phihp1t
+         write(*,*) philm1p,phih1p,phihp1p
          write(*,*) 'zetap=',zetap,'  bdyfc=',bdyfc
          write(*,*) 'zeta '
          write(*,*) zeta(ilm1),zeta(ih),zeta(ir)
-         write(*,'(10f7.4)')((phi(i,ih,ipl),i=1,10),ih=1,10)
+         write(*,*) 'ih,ith,ipl,iplp1,hf,rf,tflin,pf'
+         write(*,*) ih,ith,ipl,iplp1,hf,rf,tflin,pf
+         write(*,'(10f8.4)')((phi(ii,jj,ipl),ii=1,10),jj=1,10)
 c         stop
       endif
+
+
+
       end
 c***********************************************************************
 

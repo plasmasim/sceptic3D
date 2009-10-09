@@ -861,9 +861,7 @@ c bcp=2 -> Phiout=0
 
          do k=0,npsiused+1
             do j=0,nthused+1
-c Foo
-               phi(n1+1,j,k)=0.2*vprobe*sqrt(1-tcc(j)**2)*cos(pcc(k))
-c               phi(n1+1,j,k)=0.
+               phi(n1+1,j,k)=0.
                gpc(j,k,4)=phi(n1+1,j,k)
             enddo
          enddo
@@ -964,17 +962,43 @@ c Must set Eneutral to zero by default.
 c*******************************************************************
       subroutine fcalc_infdbl(dt)
       include 'piccom.f'
-      real dt
+      real dt,rmax
       integer imin,kk1,kk2
       imin=1.
+      rmax=rcc(nrused)
 c      call innerbc(imin,dt)
+      decay=debyelen
+c     max(debyelen,0.01)/sqrt(1+1/(Ti+vd**2))
 
-      do i=0,NRUSED
+      sB=sqrt(1-cB**2)
+      sd=sqrt(1-cd**2)
 
-         do j=1,NTHUSED
-            do k=1,NPSIUSED
-               phi(i,j,k)=vprobe/rcc(i)*exp(-(rcc(i)-rcc(1))/debyelen)
+      Exext=-vd*Bz*(cB*sd-sB*cd)
+
+      do k=1,npsiused
+         do j=1,nthused
+            do i=1,nrused
+c     Debye Huckel initialization.
+c               phi(i,j,k)=vprobe*r(1)/r(i)*exp(-(r(i)-r(1))/decay)
+c     $              +Exext*cos(pcc(k))*sqrt(1-tcc(j)**2)* (r(1)/r(i))**2
+c     $              *((r(i)+decay)/(1+decay))*exp(-(r(i)-r(1))/decay)
+
+c  Enclosed Coulomb initialization
+c               phi(i,j,k)=vprobe*r(1)/r(i)*(rmax-r(i))/(rmax-r(1))+Exext
+c     $              *cos(pcc(k))*sqrt(1-tcc(j)**2)*(r(1)/r(i))**2
+c     $              *(rmax**3-r(i)**3)/(rmax**3-r(1)**3)
+
+c Pseudo vanishing DH potential
+
+               phi(i,j,k)=vprobe/r(i)*(exp(-(r(i)-r(1))/decay)
+     $              /(1-exp(-2*(rmax-1)/decay))+exp((r(i)-r(1))
+     $              /decay)/(1-exp(2*(rmax-1)/decay)))
+     $              +Exext*cos(pcc(k))*sqrt(1-tcc(j)**2)* (r(1)/r(i))**2
+     $              *((r(i)+decay)/(1+decay))*exp(-(r(i)-r(1))/decay)
+
+
             enddo
+            phi(0,j,k)=2.5*phi(1,j,k)-2*phi(2,j,k)+0.5*phi(3,j,k)
          enddo
       enddo
 

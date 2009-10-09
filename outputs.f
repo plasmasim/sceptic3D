@@ -49,7 +49,7 @@ c Using the routines in strings_names.f
       else
          call nameappendint(filename,'r',ifix(r(nr)),2)
       endif
-      call nameappendint(filename,'P',ifix(abs(Vprobe)),2)
+      call nameappendint(filename,'P',ifix(abs(Vprobe)),3)
       if (infdbl) then
          call nameappendexp(filename,'LI',debyelen,1)
       else
@@ -74,7 +74,7 @@ c Write out averaged results.
       open(10,file=filename)
       write(10,'(a,a)')'  dt    vd    cd      Ti     steps  rhoinf ' ,
      $       'phiinf  fave  debyelen Vp   Bz  cB ...'
-      write(10,'(2f7.4,f7.3,f7.3,i5,f8.1,f7.3,f8.4,f14.5,f8.3,
+      write(10,'(2f7.4,f7.3,f7.3,i5,f8.1,f7.3,f8.4,f12.4,f9.3,
      $     f7.3,f7.3,$)') dt,vd,cd,Ti,i,rhoinf,log(rhoinf),fave,debyelen
      $     ,vprobe,Bz,cB
 

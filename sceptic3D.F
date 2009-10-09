@@ -608,6 +608,8 @@ c     SCEPTIC2D uses the potential at the current time step.
             endif
             write(*,'(i5,$)')i
          endif
+
+
 c     Calculate the potential field, unless it is fixed.
       if (myid2.eq.0.and.infdbl) then
          call fcalc_infdbl(dt)
@@ -625,19 +627,20 @@ c     Calculate the potential field, unless it is fixed.
          endif
       endif  
 
+  
+
 c     Broadcast back to the slaves.
 #ifdef MPI
-         call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
-     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
-         call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
-     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
-         call MPI_BCAST(adeficit,1,
-     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2), MPI_REAL,0
+     $     ,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2), MPI_REAL,0
+     $     ,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(adeficit,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 c     Averein is always broadcasted from 0 since it is calculated
 c     in diags, called only by myid=0, not myid2=0
-         call MPI_BCAST(averein,1,
-     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 #endif
+
          if (myid.eq.0) then
 
             

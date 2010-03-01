@@ -1,0 +1,162 @@
+This is TeX, Version 3.14159 (Web2C 7.4.5) (format=tex 2003.12.31)  7 MAY 2005 17:35
+**accissum
+(./accissum.tex {Conventions}  {Automatic plotting, single call plots.} 
+{Setup}  [1] {Color} 
+Overfull \hbox (16.40714pt too wide) in paragraph at lines 82--86
+\tenrm PLE(), IGOLD(), IGRAY(), ILIGHTGRAY(), IBLUE(), IGREEN(), ICYAN(), 
+
+\hbox(7.5+2.5)x326.21849, glue set - 1.0
+.\tenrm P
+.\tenrm L
+.\tenrm E
+.\tenrm (
+.\tenrm )
+.etc.
+
+{Data plotting} 
+Underfull \hbox (badness 1286) in paragraph at lines 101--103
+[]\tenrm LABELINE(xv,yv,ilength,clabel,ilablen) Draw polyline with embedded 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.34518
+.\hbox(0.0+0.0)x0.0
+.\tenrm L
+.\tenrm A
+.\tenrm B
+.\tenrm E
+.etc.
+
+[2]
+Underfull \hbox (badness 1558) in paragraph at lines 112--117
+[]\tenrm POLYDRAW(xv,yv,ilength,DRAWFN) Draw data marked by symbol 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.5
+.\hbox(0.0+0.0)x0.0
+.\tenrm P
+.\tenrm O
+.\tenrm L
+.\kern-0.83334
+.etc.
+
+{Axes} 
+Underfull \hbox (badness 2495) in paragraph at lines 143--145
+[]\tenrm ALTYAXIS(yi,ya) Normally the axis position would be moved by 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.9247
+.\hbox(0.0+0.0)x0.0
+.\tenrm A
+.\tenrm L
+.\kern-0.83334
+.\tenrm T
+.etc.
+
+[3] {Text plotting}  [4] {Contouring} 
+Underfull \hbox (badness 1259) in paragraph at lines 209--213
+\tenrm CONTREC(za,cworka,ixm,iym,zclv,icl) Simple contour of entire array 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.3295
+.\tenrm C
+.\tenrm O
+.\tenrm N
+.\tenrm T
+.\tenrm R
+.etc.
+
+
+Underfull \hbox (badness 1430) in paragraph at lines 214--222
+[]\tenrm CONTOURL(za,cworka,iLdim,ixm,iym,zclv,icl,x,y,icsw) General contour 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.42786
+.\hbox(0.0+0.0)x0.0
+.\tenrm C
+.\tenrm O
+.\tenrm N
+.\tenrm T
+.etc.
+
+[5]
+Underfull \hbox (badness 1062) in paragraph at lines 226--227
+[]\tenrm AUTOCOLCONT(za,iLdim,ixm,iym) Color contour za on rectangular 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.1995
+.\hbox(0.0+0.0)x0.0
+.\tenrm A
+.\kern-0.27779
+.\tenrm U
+.\tenrm T
+.etc.
+
+{Three-dimensional routines} 
+Underfull \hbox (badness 1158) in paragraph at lines 229--235
+\tenrm HIDWEB(xv,yv,za,iL,ix,iy,isw) Draw a 3-D web of za(ix,iy) (leading 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.26425
+.\tenrm H
+.\tenrm I
+.\tenrm D
+.\kern-0.27779
+.\tenrm W
+.etc.
+
+
+Underfull \hbox (badness 1629) in paragraph at lines 236--239
+[]\tenrm AXON(xv,yv,za,iL,ix,iy) Plot axonometrically za(ix,iy) at xv,yv (i.e. 
+
+
+\hbox(7.5+2.5)x326.21849, glue set 2.53568
+.\hbox(0.0+0.0)x0.0
+.\tenrm A
+.\tenrm X
+.\kern-0.27779
+.\tenrm O
+.etc.
+
+
+Underfull \hbox (badness 3536) in paragraph at lines 240--242
+[]\tenrm WEBDRW(xv,yv,za,iL,ix,iy,icorner) Draw a 3-D web using current 
+
+\hbox(7.5+2.5)x326.21849, glue set 3.28348
+.\hbox(0.0+0.0)x0.0
+.\tenrm W
+.\tenrm E
+.\tenrm B
+.\tenrm D
+.etc.
+
+[6]
+Underfull \hbox (badness 1910) in paragraph at lines 283--287
+\tenrm sx,sy. If (world3.h) ihiding is $\teni < \tenrm 0$, project in direction
+ of 3-d 
+
+\hbox(7.5+2.5)x326.21849, glue set 2.67648
+.\tenrm s
+.\tenrm x
+.\tenrm ,
+.\tenrm s
+.\tenrm y
+.etc.
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active
+\vbox(446.66776+2.5)x326.21849
+.\glue(\topskip) 2.5
+.\hbox(7.5+2.5)x326.21849, glue set 0.84761
+..\tenrm (
+..\tenrm i
+..\tenrm ^^L (ligature fi)
+..\tenrm x
+..\tenrm e
+..etc.
+.\penalty 150
+.\glue(\baselineskip) 2.0
+.\hbox(7.5+2.5)x326.21849, glue set 205.4127fil
+..\tenrm (
+..\tenrm -
+..\discretionary
+..\tenrm 1
+..\tenrm )
+..etc.
+.etc.
+
+ [7]
+{Primitives}  {Utilities}  {Linking}  [8] [9] )
+Output written on accissum.dvi (9 pages, 17888 bytes).

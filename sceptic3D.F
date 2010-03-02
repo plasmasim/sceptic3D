@@ -77,17 +77,26 @@ c Full size arrays by default. Can be changed later by switches.
       if(LCIC) nth=nthsize-1
       npsi=npsisize-1
 
+c Default MC injection values
+      mcrntheta = 5
+      mcrnpsi = 5
+      mcrnpart = 100000
+c Set cout of injected particles to zero
+      mcrninjd = 0
       
 
 c Common defaults. Avoid block data.
       vd=.000
       cd=1.0
+      cnd=1.0
       cB=1.
+      psind=0.
       debyelen=.1
       vprobe=-4.
       Ezext=0.
       bdyfc=4.
       Ti=1.
+      Tneutral=1.
       diags=.true.
       samp=.false.
       diagsamp=4
@@ -203,6 +212,7 @@ c restore defaults on read error.
          endif
          if(string(1:2) .eq. '-b') read(string(3:),*)bdyfc
          if(string(1:2) .eq. '-t') read(string(3:),*)Ti
+         if(string(1:3) .eq. '-tn') read(string(4:),*)Tneutral
          if(string(1:2) .eq. '-d') read(string(3:),*)dtf
          if(string(1:5) .eq. '-cmin')then
             read(string(6:),*)rhomin
@@ -218,6 +228,10 @@ c restore defaults on read error.
          if(string(1:2) .eq. '-x') read(string(3:),*)rmax
          if(string(1:3) .eq. '-vn') then
             read(string(4:),*)vneutral
+         elseif(string(1:4) .eq. '-cnd')then
+            read(string(5:),*)cnd
+         elseif(string(1:6) .eq. '-psind')then
+            read(string(7:),*)psind
          elseif(string(1:4) .eq. '-ver') then
             verlet=.true.            
          elseif(string(1:2) .eq. '-v')then
@@ -271,17 +285,57 @@ c restore defaults on read error.
          if(string(1:5) .eq. '--ap0') lap0=.true.
          if(string(1:10) .eq. '--localinj') localinj=.true.
         
+c     MC Reinject variables
+         if(string(1:7) .eq. '--mcrnt') read(string(8:),*)mcrntheta
+         if(string(1:7) .eq. '--mcrnp') read(string(8:),*)mcrnpsi
+         if(string(1:7) .eq. '--mcrni') read(string(8:),*)mcrnpart
+
+
  1    continue
  3    continue
 
-c Check velocity angle
+c Check ion velocity angle and set velocity vector
       if(cd.lt.-1) then
-         write(*,*)'Illegal velocity angle, set to cd=-1'
+         write(*,*)'Illegal ion velocity theta, set to cd=-1'
          cd=-1
       elseif(cd.gt.1) then
-         write(*,*)'Illegal velocity angle, set to cd=1'
+         write(*,*)'Illegal ion velocity theta, set to cd=1'
          cd=1.
       endif
+
+      drvect(3)=vd*cd
+      drvect(2)=(vd*sqrt(1-cd**2))*sin(0.)
+      drvect(1)=(vd*sqrt(1-cd**2))*cos(0.)
+
+c Check neutral velocity angles and set velocity vector
+      if(cnd.lt.-1) then
+         write(*,*)'Illegal neutral velocity theta, set to cnd=-1'
+         cnd=-1
+      elseif(cnd.gt.1) then
+         write(*,*)'Illegal neutral velocity theta, set to cnd=1'
+         cnd=1.
+      endif
+
+      if((psind.lt.0).or.(psind.ge.(2*pi))) then
+         psind = acos(cos(psind))
+      endif
+
+      vneut(3)=vneutral*cnd
+      vneut(2)=(vneutral*sqrt(1-cnd**2))*sin(psind)
+      vneut(1)=(vneutral*sqrt(1-cnd**2))*cos(psind)
+
+c Check magnetic field angle and set magnetic field vector
+      if(cB.lt.-1) then
+         write(*,*)'Illegal magnetic field theta, set to cB=-1'
+         cB=-1
+      elseif(cB.gt.1) then
+         write(*,*)'Illegal magnetic field theta, set to cB=1'
+         cB=1.
+      endif
+
+      Bvect(3)=Bz*cB
+      Bvect(2)=(Bz*sqrt(1-cB**2))*sin(0.)
+      Bvect(1)=(Bz*sqrt(1-cB**2))*cos(0.)
 
 c Set Array sizes, allowed variable.
       if(nr.gt.nrsize-1)then
@@ -307,6 +361,22 @@ c Set Array sizes, allowed variable.
       NPSIUSED=npsi
       NPSIFULL=npsi+1
 
+c Check that MC Reinjection Array sizes are within limits
+      if(mcrntheta.gt.mcrthetasize)then
+         write(*,*)'Too many theta points for MC reinjection:',
+     $     mcrntheta,'  Set to',mcrthetasize
+         mcrntheta=mcrthetasize
+      endif
+      if(mcrnpsi.gt.mcrpsisize)then
+         write(*,*)'Too many poloidal points in MC reinjection:',
+     $     mcrnpsi,' Set to',mcrpsisize
+         mcrnpsi=mcrpsisize
+      endif
+      if(mcrnpart.gt.mcrpartsize)then
+         write(*,*)'Too many ions in MC reinjection:',
+     $     mcrnpart,'  Set to',mcrpartsize
+         mcrnpart=mcrpartsize
+      endif
       
 
       if(.not.ieradset) then
@@ -376,8 +446,10 @@ c Initialize the mesh and poisson coefficients
 
 c Initialize the fields. (Changed the order of finit and injinit)
       call finit()
+c Initialize collisions and related fields.
+      call colninit(colnwt,icolntype)
 c Initialize the random functions for reinjection.
-      call injinit(icolntype,bcr)
+      call injinit(icolntype,bcr,colnwt)
 c Initialize velocity diagnostics
       vrange=8.*sqrt(Ti)+1.4*abs(vd)+1.4*sqrt(abs(vprobe))
       do kk=1,nvmax
@@ -396,8 +468,6 @@ c Initialize velocity diagnostics
       endif
       iocprev=npart
 
-c Initialize collisions and related fields.
-      call colninit(colnwt,icolntype)
 c Read in the previous particle distribution and averages.
       if(readpart) call partrd(success)
 c Or Initialize (load) particles
@@ -746,8 +816,9 @@ c Average various fluxes and fields:
       call sumreduce()
 
       if(myid.eq.0)then
-c Write the output file.
+c Write the output files.
          call output(dt,i-1,fave,icolntype,colnwt)
+         call outputhdf(dt,i-1,fave,icolntype,colnwt)
          if (norbits.ge.1) call orbitoutput()
       endif
       if(writepart) call partwrt()
@@ -785,7 +856,7 @@ c Help section
      $     ' -x.. -v.. -p.. -l.. -e[..] -r -w -g -?]'
       write(*,*)' e.g. ./sceptic -v0.2 -nr50 -nt30 -d.05'
       write(*,*)' Switch arguments (defaults):[.ff=float, nnn=integer]'
-      write(*,*)' -t.ff ion temp Ti (1);',
+      write(*,*)' -t.ff,-tn.ff ion and neutr. temp (1);',
      $     ' -snnn max time steps (500);',
      $     ' --bz.ff Larmor frequency'
       write(*,*)' -d.ff time step dt (.025);',
@@ -815,7 +886,8 @@ c Help section
       write(*,*)' --ap0 set poloidal acc. artificially to zero.'
       write(*,*)' --localinj use local potential for injection.',
      $     ' --smooth symmetrize in angle.'
-      write(*,*)' -cd.ff drift velocity cosine, -cB.ff Mag field cosine'
+      write(*,*)' -cd.ff,-cnd.ff,-cB.ff cos(th) ion & neutr dr., and B'
+      write(*,*)' -psind.ff psi of neutral drift'
       write(*,*)' --rhoinf.ff specify constant injection rate, rather',
      $     ' than particle number.'
       write(*,*)' --sp use parallel bloc solver, '
@@ -824,7 +896,9 @@ c Help section
      $     '    2: Phiout=0, 3: dPhiout/dz=0,',
      $     '    4: dPhiout/dr=-Phiout/r. use with vd=0 and k>0)'
       write(*,*)' --bcr(0) BC reinject (0:spherical sym, 1: Simple',
-     $     'Maxwellian, 2: Adiabatic)'
+     $     'Maxwellian, 2: Adiabatic, 3: Monte Carlo)'
+      write(*,*)' --mcrnt<nnn>(5), --mcrnp<nnn>(5), MC inj. mesh size.'
+      write(*,*)' --mcrni<nnn>(100000) MC inj. number of particles.'
       write(*,*)' --subcyc use step subcycling near probe.'
       write(*,*)' -ver Old verlet integrator.',  
      $     '-bohm Impose Bohm condition when LDe=0.'

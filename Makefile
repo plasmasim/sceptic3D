@@ -5,6 +5,10 @@
 ifeq ("$(G77)","")
 	G77=mpif77
 endif
+#Defaults compiler (mpif90 compiler)
+ifeq ("$(G90)","")
+	G90=mpif90
+endif
 #Default Xlib (32 bit)
 ifeq ("$(XLIB)","")
 	XLIB=/usr/X11R6/lib
@@ -15,6 +19,10 @@ ifeq ("$(ACCISLIB)","")
 endif
 
 LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+# To figure out what to use for the hdf includes and libraries
+# run the h5fc script with -show (usr/local/hdf5/bin/h5fc)
+HDFINCLUDE = -I/usr/local/hdf5/include
+HDFLIBRARIES = -L/usr/local/hdf5/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,/usr/local/hdf5/lib
 
 #Default No Warnings
 ifeq ("$(NOWARN)","")
@@ -27,13 +35,13 @@ COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
 # For profiling
 #COMPILE-SWITCHES = -Wall -O2 -pg
 
-REINJECT=orbitinject.o extint.o maxreinject.o
+REINJECT=orbitinject.o extint.o maxreinject.o mcreinject.o
 
 MPICOMPILE-SWITCHES = -DMPI $(COMPILE-SWITCHES)
 
-OBJECTS = initiate.o advancing.o randc.o randf.o diags.o outputs.o	\
+OBJECTS = initiate.o advancing.o randc.o randf.o diags.o outputs.o outputhdf.o	\
  chargefield.o $(REINJECT) stringsnames.o		\
-rhoinfcalc.o shielding3D.o
+rhoinfcalc.o shielding3D.o utils.o
 
 
 MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
@@ -41,7 +49,7 @@ MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
 all : makefile sceptic3D
 
 sceptic3D :  makefile sceptic3D.F  piccom.f  ./accis/libaccisX.a $(OBJECTS)
-	$(G77) $(COMPILE-SWITCHES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
+	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
 
 # The real Makefile
 MAKEFILE=makefile
@@ -57,7 +65,7 @@ makefile : Makefile MFSconfigure
 	make -f $(MAKEFILE)
 
 sceptic3Dmpi : sceptic3D.F  piccom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
-	$(G77) $(MPICOMPILE-SWITCHES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
+	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
 
 ./accis/libaccisX.a : ./accis/*.f
 	make -C accis
@@ -73,6 +81,9 @@ fvinjecttest : fvinjecttest.F makefile fvinject.o reinject.o initiate.o advancin
 
 fvinject.o : fvinject.f fvcom.f piccom.f
 	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
+
+outputhdf.o : outputhdf.f piccom.f colncom.f
+	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
 #pattern rule
 %.o : %.f piccom.f fvcom.f makefile;

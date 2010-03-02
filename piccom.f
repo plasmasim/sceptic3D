@@ -68,10 +68,13 @@ c Highest occupied particle slot.
       logical lfixedn
       integer myid,numprocs
       real rmtoz
+c Magnetic field and ion drift velocity vectors (taken to be in psi=0 plane)
+      real Bvect(3), drvect(3)
       common /piccom/xp,npart,vzinit,dtprec,phi,rho,rhoDiag,cerr,bdyfc
      $     ,Ti,vd,cd,cB,diags,ninjcomp,lplot,ldist,linsulate,lfloat
      $     ,lat0,lap0 ,localinj,lfixedn,myid,numprocs,rmtoz,ipf,iocprev
      $     ,Bz,lsubcycle,verlet,collcic,phiaxis
+     $     ,Bvect,drvect
 
 
 c *******************************************************************
@@ -257,3 +260,41 @@ c Data necessary for the orbit tracking
       logical orbinit
       integer maxsteps,trackinit
       common /orbtrack/orbinit,maxsteps,trackinit
+
+c*********************************************************************
+c Monte Carlo based reinjection (mcr)
+c     Number of angles, dimensions, and particles
+      integer mcrntheta,mcrnpsi,mcrnpart,mcrndim
+      parameter (mcrndim=3)
+c     Maximum array sizes
+      integer mcrthetasize,mcrpsisize,mcrpartsize
+      parameter (mcrpsisize=30,mcrthetasize=30,mcrpartsize=100000)
+c     Angle bounds of cells, so that cell i is bounded by i-1 and i
+c       Psi and costheta increase with i
+      real mcrpsi(0:mcrpsisize),mcrcostheta(0:mcrthetasize)
+c     Particle velocities
+      real mcrpart(mcrndim,mcrpartsize)
+c     Number of and list of particles injectable by each face
+      integer mcrfacenpart(mcrthetasize,mcrpsisize),
+     $     mcrfacepart(mcrpartsize,mcrthetasize,mcrpsisize)
+c     Cumulative probability distribution functions
+c       Note that mcrcumfacewgt will actually contain a single array of
+c       size mcrntheta*mcrnpsi, while mcrfacewght will contain an array
+c       for each face (theta,psi)
+      real mcrcumfacewght(mcrthetasize*mcrpsisize),
+     $     mcrfacecumnormv(mcrpartsize,mcrthetasize,mcrpsisize)
+c     Positions and velocities of injected particles (6-d phase-space)
+      real mcrxpinjd(ndim,npartmax)
+c     Number of injected particles
+      integer mcrninjd
+c     Total normal flux through outer surface (n_inf units)
+      real mcrtotflux
+c     Mcr common block
+      common /mcr/mcrntheta,mcrnpsi,mcrnpart
+     $     ,mcrpsi,mcrcostheta
+     $     ,mcrpart
+     $     ,mcrfacenpart,mcrfacepart
+     $     ,mcrcumfacewght,mcrfacecumnormv
+     $     ,mcrxpinjd, mcrninjd
+     $     ,mcrtotflux
+

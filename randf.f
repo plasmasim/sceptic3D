@@ -126,6 +126,49 @@ c         write(*,*)'q=',q
 c      endif
       end
 c********************************************************************
+c Given a monotonically increasing array Q(n) with n=1..nmax,
+c   find the index n>=nmin such that Q(n-1)<=y<Q(n)
+      subroutine invtarray(Q,nmin,nmax,y,n)
+      implicit none
+c Input variables
+      integer n,nmin,nmax
+      real Q(*)
+      real y
+c Local variables
+      integer iqr,iql, stepcount
+c If y is above Q(nmax) return nmax, if below Q(nmin) return nmin
+      if(y.ge.Q(nmax)) then
+         n=nmax
+         return
+      elseif (y.lt.Q(nmin)) then
+         n=nmin
+         return
+      endif
+c Find n by bisection
+      iql=nmin
+      iqr=nmax
+      n=(iqr+iql+1)/2
+      stepcount = 0
+ 205  if((Q(n-1).le.y).and.(y.lt.Q(n))) then
+         goto 215
+      elseif (stepcount.gt.nmax) then
+         write(*,*)  'Error in invtarray: too many iterations'
+         write(*,*)y,Q(iql),Q(n),Q(iqr),iql,n,iqr
+         n = nmax
+         goto 215
+      else
+         if(y.lt.Q(n)) then
+            iqr=n
+         else
+            iql=n
+         endif
+         n=(iqr+iql+1)/2
+         stepcount = stepcount + 1
+      endif
+      goto 205
+ 215  continue
+      end
+c********************************************************************
 C complementary error function from NR.
       FUNCTION ERFCC(X)
       Z=ABS(X)      

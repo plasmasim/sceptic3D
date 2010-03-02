@@ -102,7 +102,7 @@ c     Maxwellian with velocity driftout.
 c     But riest is calculated assuming a stationary Maxwellian (valid at
 c     nu=0). Hence rescale riest
                densred=1+driftout*sqrt(pi)/sqrt(2*Ti)           
-               if(densred<0.5) fluxred=0.5
+               if(densred.lt.0.5) fluxred=0.5
                
                riest=riest/densred
             endif
@@ -165,6 +165,24 @@ c     averein=0
      $              smaxflux(vd/sqrt(2.*Ti),(-averein/Ti))
      $              *r(NRUSED)**2 )
 c     write(*,*) riest
+            elseif (bcr.eq.3) then
+               if (icolntype.eq.1) then
+c                 Ions are drawn from a local population of neutrals,
+c                   and thus aren't affected by the potential
+c                   (though they could see the local field).
+c                   This assumes that the density everywhere on the
+c                   boundary is not significantly perturbed (i.e.
+c                   no strong magnetic shadow) since charge-exchange
+c                   only changes velocities, and does not change density
+                  riest = (nrein/dt) / mcrtotflux
+               else
+c                 When no collisions, just do the same as for bcr=1
+c                   This takes into account the potential at the boundary.
+                  riest=(nrein/dt) /
+     $                 (sqrt(Ti)*
+     $                 smaxflux(vd/sqrt(2.*Ti),(-averein/Ti))
+     $                 *r(NRUSED)**2 )
+               endif
             endif
             
          endif

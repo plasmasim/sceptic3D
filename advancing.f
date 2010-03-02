@@ -533,6 +533,16 @@ c We left. If we haven't exhausted complement, restart particle i.
 
 
                call reinject(i,dtin,icolntype,bcr)
+c              Keep record of injected particles for testing
+               if (mcrninjd.lt.npartmax) then
+                  mcrninjd = mcrninjd + 1
+                  mcrxpinjd(1,mcrninjd) = xp(1,i)
+                  mcrxpinjd(2,mcrninjd) = xp(2,i)
+                  mcrxpinjd(3,mcrninjd) = xp(3,i)
+                  mcrxpinjd(4,mcrninjd) = xp(4,i)
+                  mcrxpinjd(5,mcrninjd) = xp(5,i)
+                  mcrxpinjd(6,mcrninjd) = xp(6,i)
+               endif
 
                ipf(i)=1
                zmout=zmout+xp(6,i)
@@ -939,11 +949,15 @@ c Initialization for Collisions
       subroutine colninit(colnwt,icolntype)
       include 'piccom.f'
       include 'colncom.f'
+      integer i
 c      write(*,*)'Initialized collisions',colnwt,icolntype
       if(icolntype.eq.1 .or. icolntype.eq.2
      $     .or. icolntype.eq.5 .or. icolntype.eq.6)then
 c Constant nu collisions. The Eneutral must be consistent with vd:
          Eneutral=colnwt*(vd-vneutral)
+         do i=1,3
+            Eneut(i)=colnwt*(drvect(i)-vneut(i))
+         enddo
 c Testing
 c         Eneutral=0.
          if(myid .eq.0) write(*,*)'colnwt,vd,vneutral=',colnwt,vd

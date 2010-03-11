@@ -215,8 +215,9 @@ c     accel(1)=accel(1)-vd*sd*Bz
             if(.not.verlet) then 
 
 c     Getaccel returns the accel based on the charge-field calculation.
-               accel(3)=accel(3)+Eneutral*cd
-               accel(2)=accel(2)+Eneutral*sd
+               accel(3)=accel(3)+Eneut(3)
+               accel(2)=accel(2)+Eneut(2)
+               accel(1)=accel(1)+Eneut(1)
 
 c     Kick
                do j=4,6
@@ -279,8 +280,9 @@ c ------
 c     Old Verlet integrator
 
 c     Getaccel returns the accel based on the charge-field calculation.
-               accel(3)=accel(3)+Eneutral*cd
-               accel(2)=accel(2)+Eneutral*sd
+               accel(3)=accel(3)+Eneut(3)
+               accel(2)=accel(2)+Eneut(2)
+               accel(1)=accel(1)+Eneut(1)
                
                if(Bz.eq.0.)then
 c     Don't use split steps if Bz=0, for speed gain of 9%.
@@ -953,11 +955,28 @@ c Initialization for Collisions
 c      write(*,*)'Initialized collisions',colnwt,icolntype
       if(icolntype.eq.1 .or. icolntype.eq.2
      $     .or. icolntype.eq.5 .or. icolntype.eq.6)then
-c Constant nu collisions. The Eneutral must be consistent with vd:
-         Eneutral=colnwt*(vd-vneutral)
-         do i=1,3
-            Eneut(i)=colnwt*(drvect(i)-vneut(i))
-         enddo
+         if (Bz.ne.0.) then
+c        Constant nu collisions. Eneutral must be consistent with reldrift:
+c          Taking Eneutral and Eneut to just give parallel relative drift
+         Eneutral = colnwt*dot(magdir(1),reldrift(1),3)
+c           Start with component of Eneut needed to give right ExB dr.
+cc            call cross(magdir(1),ecbdrift(1),Eneut(1))
+cc            do i=1,3
+cc               Eneut(i) = Eneut(i)/Bz
+cc            enddo
+c           Add component parallel to B to give right average parallel drift
+            do i=1,3
+c               Eneut(i) = Eneut(i) +
+               Eneut(i) =
+     $           dot(magdir(1),reldrift(1),3)*colnwt*magdir(i)
+            enddo
+         else
+c           No magnetic field, so set Eneut to give right average drift
+            Eneutral = colnwt*sqrt(dot(reldrift(1),reldrift(1),3))
+            do i=1,3
+               Eneut(i) = colnwt*reldrift(i)
+            enddo
+         endif
 c Testing
 c         Eneutral=0.
          if(myid .eq.0) write(*,*)'colnwt,vd,vneutral=',colnwt,vd
@@ -1197,7 +1216,7 @@ c********************************************************************
       include 'piccom.f'
       include 'colncom.f'
 c Get new velocity; reflects neutral maxwellian shifted by vneutral.
-      xp(4,i)=tisq*gasdev(idum)
-      xp(5,i)=tisq*gasdev(idum)
-      xp(6,i)=tisq*gasdev(idum)+ vneutral
+      xp(4,i)=tisq*gasdev(idum) + vneut(1)
+      xp(5,i)=tisq*gasdev(idum) + vneut(2)
+      xp(6,i)=tisq*gasdev(idum) + vneut(3)
       end

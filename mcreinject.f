@@ -88,8 +88,6 @@ c     Velocity scale
       real vscale
 c     Time since last collision
       real colldt
-c     Direction of magnetic field
-      real magdir(mcrndim)
 c     Initial parallel (to B) velocity and evolved perpendicular vel.
       real vpar(mcrndim), vperp(mcrndim), vperpmag
 c     Orthonormal base vectors spanning vperp plane (forming R.H. x-y-b)
@@ -139,11 +137,6 @@ c Generate particles from a drifting Maxwellian of neutrals
          enddo
       enddo
 
-c Set direction of magnetic field
-      do j=1,mcrndim
-         magdir(j) = Bvect(j)/Bz
-      enddo
-
 c Evolve each velocity over time since last collision
       do i=1,mcrnpart
          if (colnwt.gt.0.) then
@@ -157,13 +150,19 @@ c           Initial perpendicular velocity
             call cross(mcrpart(1,i),magdir(1),vperp(1))
             call cross(magdir(1),vperp(1),vperp(1))
             vperpmag = sqrt(dot(vperp(1),vperp(1),mcrndim))
-c           E cross B drift
-            call cross(Eneut(1),magdir(1),ecbdr(1))
+c           E cross B drift if collisions
+cc            call cross(Eneut(1),magdir(1),ecbdr(1))
             do j=1,mcrndim
-               ecbdr(j) = ecbdr(j)/Bz
                vpar(j) = magdir(j)*dot(mcrpart(1,i),magdir(1),mcrndim)
-               epardv(j) = magdir(j)*dot(Eneut(1),magdir(1),mcrndim)*
-     $           colldt
+               if (colldt.gt.0.) then
+cc                  ecbdr(j) = ecbdr(j)/Bz
+                  epardv(j)=magdir(j)*dot(Eneut(1),magdir(1),mcrndim)*
+     $              colldt
+               else
+c                 If no collisions, the drift is specified
+                  epardv(j)=magdir(j)*dot(drvect(1),magdir(1),mcrndim)
+cc                  ecbdr(j) = drvect(j) - epardv(j)
+               endif
                vperpx(j) = vperp(j)/vperpmag
             enddo
             call cross(magdir(1),vperpx(1),vperpy(1))
@@ -184,12 +183,14 @@ c           No magnetic field, so no E cross B and no perp dir.
 c                 No collisions, so just add specified drift
                   epardv(j) = drvect(j)
                endif
-               ecbdr(j) = 0.
+cc               ecbdr(j) = 0.
             enddo
          endif
 c        Set final velocity
          do j=1,mcrndim
-            mcrpart(j,i) = vpar(j) + vperp(j) + epardv(j) + ecbdr(j)
+cc            mcrpart(j,i) = vpar(j) + vperp(j) + epardv(j) + ecbdr(j)
+            mcrpart(j,i) = vpar(j) + vperp(j) + epardv(j) +
+     $        ecbdrift(j)
          enddo
       enddo
 

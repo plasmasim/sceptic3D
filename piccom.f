@@ -68,13 +68,17 @@ c Highest occupied particle slot.
       logical lfixedn
       integer myid,numprocs
       real rmtoz
-c Magnetic field and ion drift velocity vectors (taken to be in psi=0 plane)
+c Magnetic field and ion drift velocity vectors (taken to be in psi=pi/2 (y-z) plane)
       real Bvect(3), drvect(3)
+c Direction of magnetic field
+      real magdir(3)
+c Relative drift perpendicular to B (ExB drift)
+      real ecbdrift(3)
       common /piccom/xp,npart,vzinit,dtprec,phi,rho,rhoDiag,cerr,bdyfc
      $     ,Ti,vd,cd,cB,diags,ninjcomp,lplot,ldist,linsulate,lfloat
      $     ,lat0,lap0 ,localinj,lfixedn,myid,numprocs,rmtoz,ipf,iocprev
      $     ,Bz,lsubcycle,verlet,collcic,phiaxis
-     $     ,Bvect,drvect
+     $     ,Bvect,drvect,magdir,ecbdrift
 
 
 c *******************************************************************

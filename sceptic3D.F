@@ -90,7 +90,7 @@ c Common defaults. Avoid block data.
       cd=1.0
       cnd=1.0
       cB=1.
-      psind=0.
+      psind=pi/2.
       debyelen=.1
       vprobe=-4.
       Ezext=0.
@@ -303,9 +303,10 @@ c Check ion velocity angle and set velocity vector
          cd=1.
       endif
 
+c Drift vector taken to be in y-z plane
       drvect(3)=vd*cd
-      drvect(2)=(vd*sqrt(1-cd**2))*sin(0.)
-      drvect(1)=(vd*sqrt(1-cd**2))*cos(0.)
+      drvect(2)=(vd*sqrt(1-cd**2))*1.
+      drvect(1)=(vd*sqrt(1-cd**2))*0.
 
 c Check neutral velocity angles and set velocity vector
       if(cnd.lt.-1) then
@@ -324,6 +325,13 @@ c Check neutral velocity angles and set velocity vector
       vneut(2)=(vneutral*sqrt(1-cnd**2))*sin(psind)
       vneut(1)=(vneutral*sqrt(1-cnd**2))*cos(psind)
 
+c Set relative drift
+      do i=1,3
+c        Relative drift taken to be what is specified with vd
+         reldrift(i) = drvect(i)
+cc         reldrift(i) = drvect(i) - vneut(i)
+      enddo
+
 c Check magnetic field angle and set magnetic field vector
       if(cB.lt.-1) then
          write(*,*)'Illegal magnetic field theta, set to cB=-1'
@@ -333,9 +341,27 @@ c Check magnetic field angle and set magnetic field vector
          cB=1.
       endif
 
+c Magnetic field taken to be in y-z plane
       Bvect(3)=Bz*cB
-      Bvect(2)=(Bz*sqrt(1-cB**2))*sin(0.)
-      Bvect(1)=(Bz*sqrt(1-cB**2))*cos(0.)
+      Bvect(2)=(Bz*sqrt(1-cB**2))*1.
+      Bvect(1)=(Bz*sqrt(1-cB**2))*0.
+      if (Bz.ne.0.) then
+c        Set direction of magnetic field
+         do i=1,3
+            magdir(i) = Bvect(i)/Bz
+         enddo
+c        Find ExB drift
+         do i=1,3
+            ecbdrift(i) = reldrift(i) -
+     $        dot(magdir(1),reldrift(1),3)*magdir(i)
+         enddo
+      else
+         do i=1,3
+            magdir(i) = 0.
+            ecbdrift(i) = 0.
+         enddo
+      endif
+
 
 c Set Array sizes, allowed variable.
       if(nr.gt.nrsize-1)then
@@ -862,7 +888,7 @@ c Help section
       write(*,*)' -d.ff time step dt (.025);',
      $     ' -c.ff initial accel factor (1)'
       write(*,*)' -cmax.ff -cmin.ff limits of rho plotting (auto)'
-      write(*,*)' -v.ff drift velocity (0.0);',
+      write(*,*)' -v.ff ion drift vel. rel. to neut. due to E (0.0);',
      $     ' -x.ff max r of domain (5)'
       write(*,*)' -p.ff probe potential (-4.) -pf float -pi insulate;',
      $     ' -b.ff Boundary factor (4)'
@@ -887,7 +913,7 @@ c Help section
       write(*,*)' --localinj use local potential for injection.',
      $     ' --smooth symmetrize in angle.'
       write(*,*)' -cd.ff,-cnd.ff,-cB.ff cos(th) ion & neutr dr., and B'
-      write(*,*)' -psind.ff psi of neutral drift'
+      write(*,*)' -psind.ff psi of neutral drift (pi/2)'
       write(*,*)' --rhoinf.ff specify constant injection rate, rather',
      $     ' than particle number.'
       write(*,*)' --sp use parallel bloc solver, '

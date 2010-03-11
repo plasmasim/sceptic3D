@@ -2,66 +2,9 @@ export NPROCS=8
 
 echo This job has allocated $NPROCS nodes
 
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g -v2."
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
 
 echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -v2. --bcr3"
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g -v2. -kt1 -k1."
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -v2. -kt1 -k1. --bcr3"
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g -v2. --bz0.1"
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -v2. --bz0.1 --bcr3"
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g -v2. -kt1 -k0.01 --bz1. -cB0."
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -v2. -kt1 -k0.01 --bz1. --bcr3 -cB0."
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-%mpirun -l -np $NPROCS $PROGRAM
-
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g -kt1 -k0.01 --bz1. -cB0. -v2. -vn2."
-echo mpirun -l -np $NPROCS $PROGRAM
-echo
-mpirun -l -np $NPROCS $PROGRAM
-
-echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s5 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -kt1 -k0.01 --bz1. --bcr3 -cB0. -v2. -vn2."
+PROGRAM="./sceptic3Dmpi -s15 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30  -kt1 -k0.01 --bz1. -cB.5 -v2. -cd.3 -vn3. --bcr3"
 echo mpirun -l -np $NPROCS $PROGRAM
 echo
 mpirun -l -np $NPROCS $PROGRAM

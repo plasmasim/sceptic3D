@@ -1,0 +1,66 @@
+#!/bin/bash
+
+### Set the job name
+#PBS -N ZZZ
+
+### Set the queue to submit this job
+#PBS -q default
+
+### Set the number of nodes that will be used
+#PBS -l nodes=16:ppn=8
+#PBS -l walltime=10:00:00
+
+
+cd $PBS_O_WORKDIR
+echo `pwd`
+
+
+export NPROCS=`wc -l $PBS_NODEFILE|gawk '//{print $1}'`
+
+echo The master node of this job is `hostname`
+echo The working directory is $PBS_O_WORKDIR
+echo The node file is $PBS_NODEFILE
+echo =======================
+echo This job runs on the following nodes:
+echo `cat $PBS_NODEFILE`
+echo ======================
+echo This job has allocated $NPROCS nodes
+
+
+echo  command to EXE:
+
+for c1 in 1.; do
+
+for l in 1; do
+
+for T in 1; do
+
+for P in -4; do
+
+
+PROGRAM="./sceptic3Dmpi -t$T -l$l -p$P
+-x12 -s3500 -nr120 --sp
+--subcyc -nt30 -np30 -f -g --bcr3"
+
+echo mpirun -np $NPROCS -machinefile $PBS_NODEFILE $PROGRAM
+echo
+mpirun -np $NPROCS -machinefile $PBS_NODEFILE $PROGRAM
+
+
+PROGRAM="./sceptic3Dmpi -t$T -l$l -p$P
+-x12 -s3500 -nr120 --sp
+--subcyc -nt30 -np30 -f -g"
+
+echo mpirun -np $NPROCS -machinefile $PBS_NODEFILE $PROGRAM
+echo
+mpirun -np $NPROCS -machinefile $PBS_NODEFILE $PROGRAM
+
+
+done;
+done;
+done;
+done;
+
+sleep 1
+exit
+

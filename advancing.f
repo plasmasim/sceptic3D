@@ -1215,8 +1215,8 @@ c********************************************************************
       subroutine postcollide(i,tisq)
       include 'piccom.f'
       include 'colncom.f'
-c Get new velocity; reflects neutral maxwellian shifted by vneutral.
-      xp(4,i)=tisq*gasdev(idum) + vneut(1)
-      xp(5,i)=tisq*gasdev(idum) + vneut(2)
-      xp(6,i)=tisq*gasdev(idum) + vneut(3)
+c Get new velocity; reflects neutral maxwellian shifted by vneut and v_ExB.
+      xp(4,i)=tisq*gasdev(idum) + vneut(1) + ecbdrift(1)
+      xp(5,i)=tisq*gasdev(idum) + vneut(2) + ecbdrift(2)
+      xp(6,i)=tisq*gasdev(idum) + vneut(3) + ecbdrift(3)
       end

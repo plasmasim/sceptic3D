@@ -80,23 +80,10 @@ c Common data
       include 'piccom.f'
       include 'colncom.f'
 c Functions used
-      real ran0, gasdev, dot
+      real dot
 c Local variables
 c     Step sizes in psi and cos theta
       real psistep, costhstep
-c     Velocity scale
-      real vscale
-c     Time since last collision
-      real colldt
-c     Initial parallel (to B) velocity and evolved perpendicular vel.
-      real vpar(mcrndim), vperp(mcrndim), vperpmag
-c     Orthonormal base vectors spanning vperp plane (forming R.H. x-y-b)
-      real vperpx(mcrndim), vperpy(mcrndim)
-c     Change in parallel velocity due to electric field,
-c       and E cross B drift velocity
-      real epardv(mcrndim), ecbdr(mcrndim)
-c     Angle of rotation due to cyclotron motion
-      real rot
 c     Angles of face center and solid angle of face
       real theta, psi, solidangle
 c     Normal to face
@@ -125,74 +112,8 @@ c Set theta and psi grid (i.e. define injection faces)
          mcrpsi(i) = i*psistep
       enddo
 
-c Generate particles from a drifting Maxwellian of neutrals
-      if (Tneutral.gt.0.) then
-         vscale=sqrt(Tneutral)
-      else
-         write (*,*) 'Error in mcrinjinit: Tneutral=0'
-      endif
-      do i=1,mcrnpart
-         do j=1,mcrndim
-            mcrpart(j,i) = vscale*gasdev(idum) + vneut(j)
-         enddo
-      enddo
-
-c Evolve each velocity over time since last collision
-      do i=1,mcrnpart
-         if (colnwt.gt.0.) then
-            colldt = -alog(ran0(idum))/colnwt
-         else
-            colldt = 0.
-         endif
-         if (Bz.ne.0.) then
-c           Non-zero magnetic field, so evolve velocity accordingly
-c           Initial perpendicular velocity
-            call cross(mcrpart(1,i),magdir(1),vperp(1))
-            call cross(magdir(1),vperp(1),vperp(1))
-            vperpmag = sqrt(dot(vperp(1),vperp(1),mcrndim))
-c           E cross B drift if collisions
-cc            call cross(Eneut(1),magdir(1),ecbdr(1))
-            do j=1,mcrndim
-               vpar(j) = magdir(j)*dot(mcrpart(1,i),magdir(1),mcrndim)
-               if (colldt.gt.0.) then
-cc                  ecbdr(j) = ecbdr(j)/Bz
-                  epardv(j)=magdir(j)*dot(Eneut(1),magdir(1),mcrndim)*
-     $              colldt
-               else
-c                 If no collisions, the drift is specified
-                  epardv(j)=magdir(j)*dot(drvect(1),magdir(1),mcrndim)
-cc                  ecbdr(j) = drvect(j) - epardv(j)
-               endif
-               vperpx(j) = vperp(j)/vperpmag
-            enddo
-            call cross(magdir(1),vperpx(1),vperpy(1))
-            rot = Bz*colldt
-            do j=1,mcrndim
-c              Evolved perpendicular velocity
-               vperp(j) = vperpmag *
-     $           ( vperpx(j)*cos(rot) - vperpy(j)*sin(rot) )
-            enddo
-         else
-c           No magnetic field, so no E cross B and no perp dir.
-            do j=1,mcrndim
-               vperp(j) = 0.
-               vpar(j) = mcrpart(j,i)
-               if (colldt.gt.0.) then
-                  epardv(j) = Eneut(j)*colldt
-               else
-c                 No collisions, so just add specified drift
-                  epardv(j) = drvect(j)
-               endif
-cc               ecbdr(j) = 0.
-            enddo
-         endif
-c        Set final velocity
-         do j=1,mcrndim
-cc            mcrpart(j,i) = vpar(j) + vperp(j) + epardv(j) + ecbdr(j)
-            mcrpart(j,i) = vpar(j) + vperp(j) + epardv(j) +
-     $        ecbdrift(j)
-         enddo
-      enddo
+c Generate particles to be injected
+      call mcgenpart(mcrpart,mcrndim,mcrnpart,1,colnwt)
 
 c Determine which particles are injectable by, and the flux through, each face
 c This may take a significant amount of computational time, but is only done once
@@ -248,5 +169,119 @@ c       Could average flux from each node before calculating rhoinf.
       mcrtotflux = mcrtotflux/mcrnpart
       mcrtotflux = mcrtotflux*r(nrused)**2
 
+
+      end
+
+c********************************************************************
+c Generate particle velocities from neutral distribution and evolve for
+c   a collisional time
+      subroutine mcgenpart(velocities,ndims,n,dimmin,colnwt)
+      implicit none
+c Input variables
+c     Number of dimensions of particle info (generally 3 or 6, depending
+c       on whether or not positional info is included
+      integer ndims
+c     Number of particles
+      integer n
+c     Index of first dimension to put velocity info in (1 or 4, depending
+c       on whether or not positional info is included
+      integer dimmin
+c     Particle velocities to be output
+      real velocities(ndims,n)
+c     Collision frequency
+      real colnwt
+c Common data
+      include 'piccom.f'
+      include 'colncom.f'
+c Functions used
+      real ran0, gasdev, dot
+c Local variables
+c     Velocity scale
+      real vscale
+c     Time since last collision
+      real colldt
+c     Initial parallel (to B) velocity and evolved perpendicular vel.
+      real vpar(mcrndim), vperp(mcrndim), vperpmag
+c     Orthonormal base vectors spanning vperp plane (forming R.H. x-y-b)
+      real vperpx(mcrndim), vperpy(mcrndim)
+c     Change in parallel velocity due to electric field,
+c       and E cross B drift velocity
+      real epardv(mcrndim), ecbdr(mcrndim)
+c     Angle of rotation due to cyclotron motion
+      real rot
+c     Working variables
+      integer i,j,idum
+
+c Generate particles from a drifting Maxwellian of neutrals
+c     Argument of ran0 doesn't do anything, so just set to 1
+      idum = 1
+      if (Tneutral.gt.0.) then
+         vscale=sqrt(Tneutral)
+      else
+         write (*,*) 'Error in mcgenpart: Tneutral=0'
+      endif
+      do i=1,n
+         do j=1,mcrndim
+            velocities(dimmin-1+j,i) = vscale*gasdev(idum) + vneut(j)
+         enddo
+      enddo
+
+c Evolve each velocity over time since last collision
+      do i=1,n
+         if (colnwt.gt.0.) then
+            colldt = -alog(ran0(idum))/colnwt
+         else
+            colldt = 0.
+         endif
+         if (Bz.ne.0.) then
+c           Non-zero magnetic field, so evolve velocity accordingly
+c           Initial perpendicular velocity
+            call cross(velocities(dimmin,i),magdir(1),vperp(1))
+            call cross(magdir(1),vperp(1),vperp(1))
+            vperpmag = sqrt(dot(vperp(1),vperp(1),mcrndim))
+c           E cross B drift if collisions
+cc            call cross(Eneut(1),magdir(1),ecbdr(1))
+            do j=1,mcrndim
+               vpar(j) = magdir(j)*dot(velocities(dimmin,i),
+     $           magdir(1),mcrndim)
+               if (colldt.gt.0.) then
+cc                  ecbdr(j) = ecbdr(j)/Bz
+                  epardv(j)=magdir(j)*dot(Eneut(1),magdir(1),mcrndim)*
+     $              colldt
+               else
+c                 If no collisions, the drift is specified
+                  epardv(j)=magdir(j)*dot(drvect(1),magdir(1),mcrndim)
+cc                  ecbdr(j) = drvect(j) - epardv(j)
+               endif
+               vperpx(j) = vperp(j)/vperpmag
+            enddo
+            call cross(magdir(1),vperpx(1),vperpy(1))
+            rot = Bz*colldt
+            do j=1,mcrndim
+c              Evolved perpendicular velocity
+               vperp(j) = vperpmag *
+     $           ( vperpx(j)*cos(rot) - vperpy(j)*sin(rot) )
+            enddo
+         else
+c           No magnetic field, so no E cross B and no perp dir.
+            do j=1,mcrndim
+               vperp(j) = 0.
+               vpar(j) = velocities(dimmin-1+j,i)
+               if (colldt.gt.0.) then
+                  epardv(j) = Eneut(j)*colldt
+               else
+c                 No collisions, so just add specified drift
+                  epardv(j) = drvect(j)
+               endif
+cc               ecbdr(j) = 0.
+            enddo
+         endif
+c        Set final velocity
+         do j=1,mcrndim
+cc            velocities(dimmin-1+j,i) = vpar(j) + vperp(j) + epardv(j) + ecbdr(j)
+            velocities(dimmin-1+j,i) = vpar(j) +vperp(j) +epardv(j) +
+     $        ecbdrift(j)
+         enddo
+      enddo
 
       end

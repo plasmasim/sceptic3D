@@ -499,7 +499,7 @@ c Read in the previous particle distribution and averages.
 c Or Initialize (load) particles
       
 
-      if(.not.success) call pinit()
+      if(.not.success) call pinit(colnwt)
 c Need to reset i to avoid problems at RhoDiag ... initialization
       i=0
       samp=.true.

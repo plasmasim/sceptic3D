@@ -194,7 +194,10 @@ c      enddo
       end
 c***********************************************************************
 c Initializing particles.
-      subroutine pinit()
+      subroutine pinit(colnwt)
+c Input variables
+c     Collision frequency
+      real colnwt
 c Common data:
       include 'piccom.f'
       real sd
@@ -211,7 +214,12 @@ c For now use the whole array.
       if(rmax2.le.1.) stop 'Error: rmax is less than 1.'
 
 c     We initialize the 'true' particles'
+c     Set velocities if using bcr=3
+      if (bcr.eq.3) then
+         call mcgenpart(xp,6,npart,4,colnwt)
+      endif
       do i=1,npart
+c        Set positions
          ipf(i)=1
  1       continue
          ntries=ntries+1
@@ -222,13 +230,17 @@ c     We initialize the 'true' particles'
          do j=1,3
             rc=rc+xp(j,i)**2
          enddo
-c     If we are not in the plasma region, try again.
+c        If we are not in the plasma region, try again.
          if(rc.ge.rmax2 .or. rc.le.1.) goto 1
-         Ti0=Ti
-         tisq=sqrt(Ti0)
-         xp(4,i)=tisq*gasdev(idum) 
-         xp(5,i)=tisq*gasdev(idum) + vd*sd
-         xp(6,i)=tisq*gasdev(idum) + vd*cd
+
+c        Set velocities if using bcr!=3
+         if (bcr.ne.3) then
+            Ti0=Ti
+            tisq=sqrt(Ti0)
+            xp(4,i)=tisq*gasdev(idum)
+            xp(5,i)=tisq*gasdev(idum) + vd*sd
+            xp(6,i)=tisq*gasdev(idum) + vd*cd
+         endif
    
 
 c         if(istrapped(i).eq.1)then

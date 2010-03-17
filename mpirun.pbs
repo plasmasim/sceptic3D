@@ -4,11 +4,16 @@ echo This job has allocated $NPROCS nodes
 
 
 echo  command to EXE:
-PROGRAM="./sceptic3Dmpi -s150 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 -kt1 -k0.01 --bz1. -v-1. -vn3. --bcr3"
+PROGRAM="./sceptic3Dmpi -s150 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 --bz1. -cB.2 -v2. -cd.4"
 echo mpirun -l -np $NPROCS $PROGRAM
 echo
 mpirun -l -np $NPROCS $PROGRAM
 
+echo  command to EXE:
+PROGRAM="./sceptic3Dmpi -s150 -nr50 -nt10 -np10 --sp -f -g --mcrnt30 --mcrnp30 --bz1. -cB.2 -v2. -cd.4 --bcr3"
+echo mpirun -l -np $NPROCS $PROGRAM
+echo
+mpirun -l -np $NPROCS $PROGRAM
 
 
 sleep 1

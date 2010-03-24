@@ -35,6 +35,8 @@ c Use of particle advance subcycling in inner regions for accuracy.
       logical lsubcycle
 c Integrator type. True=old, False=new symplectic schemes
       logical verlet
+c Don't suppress output of large arrays
+      logical lfulloutput
 c CIC definitions
       logical LCIC,collcic
       integer NRUSED,NTHUSED,NPSIUSED,NRFULL,NTHFULL,NPSIFULL
@@ -78,7 +80,7 @@ c Relative drift perpendicular to B (ExB drift)
      $     ,Ti,vd,cd,cB,diags,ninjcomp,lplot,ldist,linsulate,lfloat
      $     ,lat0,lap0 ,localinj,lfixedn,myid,numprocs,rmtoz,ipf,iocprev
      $     ,Bz,lsubcycle,verlet,collcic,phiaxis
-     $     ,Bvect,drvect,magdir,ecbdrift
+     $     ,Bvect,drvect,magdir,ecbdrift,lfulloutput
 
 
 c *******************************************************************

@@ -147,6 +147,7 @@ c     drifting Maxwellian reinjection.
       infdbl=.false.
       orbinit=.false.
       lsubcycle=.false.
+      lfulloutput=.false.
       verlet=.false.
       bohm=.false.
 c Signal that fvcom is not initialized. After initialization it is .ne.0
@@ -183,6 +184,10 @@ c Deal with arguments
          if(string(1:8) .eq. '--subcyc')then
             lsubcycle=.true.
          endif
+         if(string(1:12) .eq. '--fulloutput')then
+            lfulloutput=.true.
+         endif
+
          if(string(1:2) .eq. '-f') finaldiags=.false.
          if(string(1:3) .eq. '-er') then
             ieradset=.true.
@@ -212,7 +217,11 @@ c restore defaults on read error.
          endif
          if(string(1:2) .eq. '-b') read(string(3:),*)bdyfc
          if(string(1:2) .eq. '-t') read(string(3:),*)Ti
-         if(string(1:3) .eq. '-tn') read(string(4:),*)Tneutral
+         if(string(1:3) .eq. '-tn') then
+            read(string(4:),*)Tneutral
+         else
+            Tneutral = Ti
+         endif
          if(string(1:2) .eq. '-d') read(string(3:),*)dtf
          if(string(1:5) .eq. '-cmin')then
             read(string(6:),*)rhomin
@@ -882,7 +891,7 @@ c Help section
      $     ' -x.. -v.. -p.. -l.. -e[..] -r -w -g -?]'
       write(*,*)' e.g. ./sceptic -v0.2 -nr50 -nt30 -d.05'
       write(*,*)' Switch arguments (defaults):[.ff=float, nnn=integer]'
-      write(*,*)' -t.ff,-tn.ff ion and neutr. temp (1);',
+      write(*,*)' -t.ff,-tn.ff ion and neutr. temp (Ti=1, Tn=Ti);',
      $     ' -snnn max time steps (500);',
      $     ' --bz.ff Larmor frequency'
       write(*,*)' -d.ff time step dt (.025);',
@@ -928,6 +937,7 @@ c Help section
       write(*,*)' --subcyc use step subcycling near probe.'
       write(*,*)' -ver Old verlet integrator.',  
      $     '-bohm Impose Bohm condition when LDe=0.'
+      write(*,*)' --fulloutput do not suppress output of large arrays.'
 
       end
 

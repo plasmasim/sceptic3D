@@ -174,6 +174,8 @@ c                   This assumes that the density everywhere on the
 c                   boundary is not significantly perturbed (i.e.
 c                   no strong magnetic shadow) since charge-exchange
 c                   only changes velocities, and does not change density
+c                 nrein is from all nodes, while mcrtotflux for now is
+c                   from only the present node (0)
                   riest = (nrein/dt) / mcrtotflux
                else
 c                 When no collisions, just do the same as for bcr=1

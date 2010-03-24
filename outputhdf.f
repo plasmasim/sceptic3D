@@ -68,9 +68,9 @@ c   using the routines in strings_names.f
      $    call nameappendint(filename,'bcr',bcr,1)
 
 c     Turn on these when testing convergence with changing grid size
-cc      call nameappendint(filename,'Nr',nrused,3)
-cc      call nameappendint(filename,'Nt',nthused,3)
-cc      call nameappendint(filename,'Np',npsiused,3)
+      call nameappendint(filename,'Nr',nrused,3)
+      call nameappendint(filename,'Nt',nthused,3)
+      call nameappendint(filename,'Np',npsiused,3)
 
       idf=nbcat(filename,'.h5')
 
@@ -135,6 +135,10 @@ c     Single value variables
       dsetname = 'verlet'
       call writehdfintmat(group_id,dsetname,
      $ verlet,storage_dims,data_dims,rank)
+
+      dsetname = 'lfulloutput'
+      call writehdfintmat(group_id,dsetname,
+     $ lfulloutput,storage_dims,data_dims,rank)
 
       dsetname = 'LCIC'
       call writehdfintmat(group_id,dsetname,
@@ -338,6 +342,20 @@ c     Variable arrays
       storage_dims(1) = 3
       call writehdfrealmat(group_id,dsetname,
      $  drvect,storage_dims,data_dims,rank)
+
+      dsetname = 'magdir'
+      rank = 1
+      data_dims(1) = 3
+      storage_dims(1) = 3
+      call writehdfrealmat(group_id,dsetname,
+     $  magdir,storage_dims,data_dims,rank)
+
+      dsetname = 'ecbdrift'
+      rank = 1
+      data_dims(1) = 3
+      storage_dims(1) = 3
+      call writehdfrealmat(group_id,dsetname,
+     $  ecbdrift,storage_dims,data_dims,rank)
 
 c Close the group.
       CALL h5gclose_f(group_id, error)
@@ -1180,6 +1198,9 @@ c     Variable arrays
       call writehdfintmat(group_id,dsetname,
      $  mcrfacenpart,storage_dims,data_dims,rank)
 
+
+      if (lfulloutput) then
+
       dsetname = 'mcrfacepart'
       rank = 3
       data_dims(1) = mcrnpart
@@ -1191,13 +1212,6 @@ c     Variable arrays
       call writehdfintmat(group_id,dsetname,
      $  mcrfacepart,storage_dims,data_dims,rank)
 
-      dsetname = 'mcrcumfacewght'
-      rank = 1
-      data_dims(1) = mcrntheta*mcrnpsi
-      storage_dims(1) = mcrthetasize*mcrpsisize
-      call writehdfrealmat(group_id,dsetname,
-     $ mcrcumfacewght,storage_dims,data_dims,rank)
-
       dsetname = 'mcrfacecumnormv'
       rank = 3
       data_dims(1) = mcrnpart
@@ -1208,6 +1222,16 @@ c     Variable arrays
       storage_dims(3) = mcrpsisize
       call writehdfrealmat(group_id,dsetname,
      $ mcrfacecumnormv,storage_dims,data_dims,rank)
+
+      endif
+
+
+      dsetname = 'mcrcumfacewght'
+      rank = 1
+      data_dims(1) = mcrntheta*mcrnpsi
+      storage_dims(1) = mcrthetasize*mcrpsisize
+      call writehdfrealmat(group_id,dsetname,
+     $ mcrcumfacewght,storage_dims,data_dims,rank)
 
       dsetname = 'mcrxpinjd'
       rank = 2
@@ -1271,6 +1295,44 @@ c     Variable arrays
       storage_dims(1) = 3
       call writehdfrealmat(group_id,dsetname,
      $  Eneut,storage_dims,data_dims,rank)
+
+      dsetname = 'reldrift'
+      rank = 1
+      data_dims(1) = 3
+      storage_dims(1) = 3
+      call writehdfrealmat(group_id,dsetname,
+     $  reldrift,storage_dims,data_dims,rank)
+
+c Close the group.
+      CALL h5gclose_f(group_id, error)
+
+
+c Create a group in the file.
+      groupname = 'noncommonblock'
+      CALL h5gcreate_f(file_id, groupname, group_id, error)
+
+c Write the data in this group
+
+c     Single value variables
+      rank = 1
+      data_dims(1) = 1
+      storage_dims(1) = 1
+
+      dsetname = 'dt'
+      call writehdfrealmat(group_id,dsetname,
+     $ dt,storage_dims,data_dims,rank)
+
+      dsetname = 'fave'
+      call writehdfrealmat(group_id,dsetname,
+     $ fave,storage_dims,data_dims,rank)
+
+      dsetname = 'colnwt'
+      call writehdfrealmat(group_id,dsetname,
+     $ colnwt,storage_dims,data_dims,rank)
+
+      dsetname = 'icolntype'
+      call writehdfintmat(group_id,dsetname,
+     $ icolntype,storage_dims,data_dims,rank)
 
 c Close the group.
  999  CALL h5gclose_f(group_id, error)

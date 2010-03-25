@@ -824,7 +824,7 @@ c Small mesh written diagnostics.
 c Check if any node tripped lgotooutput, and if so, leave do loop
 #ifdef MPI
          ltmp = lgotooutput
-         call MPI_ALLREDUCE(lgotooutput,ltmp,1,MPI_INT,MPI_LOR
+         call MPI_ALLREDUCE(lgotooutput,ltmp,1,MPI_INTEGER,MPI_LOR
      $        ,MPI_COMM_WORLD,ierr)
          lgotooutput = ltmp
 #endif

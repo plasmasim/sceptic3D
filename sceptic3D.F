@@ -39,6 +39,9 @@ c     For now, put maxsteps in piccom
       logical lcolcont,lpstore
       logical lsmoothT,lsmoothP
       integer m2,rshield
+
+      logical ltmp
+
 c Communicator and id for the conjugate gradient communicator
 c In the case of cgparallel=false, myid2=0 only
 c does the potential calculation
@@ -786,10 +789,6 @@ c     default we also evaluate at the probe surface
 c     Main particle advance, including collisions.
          
          call padvnc(dt,icolntype,colnwt,i,maccel,ierad)
-c        If lgotooutput triggered go to output (only master node outputs,
-c          so for now set up so only does this if lgotooutput triggered
-c          on master node).
-         if (myid .eq. 0 .and. lgotooutput) goto 50
 
 
 c     Reduce back the flux and distribution data from the particle advance.
@@ -821,7 +820,19 @@ c Small mesh written diagnostics.
          time=time+dt
  503     format(10f8.1)
  504     format(10f8.3) 
+
+c Check if any node tripped lgotooutput, and if so, leave do loop
+#ifdef MPI
+         ltmp = lgotooutput
+         call MPI_ALLREDUCE(lgotooutput,ltmp,1,MPI_INT,MPI_LOR
+     $        ,MPI_COMM_WORLD,ierr)
+         lgotooutput = ltmp
+#endif
+         if (lgotooutput) goto 50
+
       enddo
+
+ 50   continue
 c End of particle stepping section.
 
       itotsteps=maxsteps
@@ -856,7 +867,7 @@ c Average various fluxes and fields:
   
       call sumreduce()
 
- 50   if(myid.eq.0)then
+      if(myid.eq.0)then
 c Write the output files.
          call output(dt,i-1,fave,icolntype,colnwt)
          call outputhdf(dt,i-1,fave,icolntype,colnwt)

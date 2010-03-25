@@ -426,7 +426,9 @@ c Calculate the potential on the grid according to phi=log(rho)
             do i=3,nrused
                if(rho(i,j,k).le.0.)then
                   write(*,*)'rho=0',i,j,k
-                  stop
+c                  stop
+c                 Trigger go to output
+                  lgotooutput = .true.
                endif
 c Relaxed Boltzmann scheme.
                delta=phi(i,j,k)-log(rho(i,j,k))
@@ -437,7 +439,9 @@ c Relaxed Boltzmann scheme.
             do i=1,2
                if(rho(i,j,k).le.0.)then
                   write(*,*)'rho=0',i,j,k
-                  stop
+c                  stop
+c                 Trigger go to output
+                  lgotooutput = .true.
                endif
                relax=1.               
 c Relaxed Boltzmann scheme.
@@ -519,7 +523,9 @@ c            endif
                   s2=s2*volinv(2)
                else
                   write(*,*)'s2=0'
-                  stop
+c                  stop
+c                  Trigger go to output
+                   lgotooutput = .true.
                endif
             endif
 
@@ -555,7 +561,9 @@ c Average the sound-speed value over ncs steps.
             if(cs(j,k).gt.0)then
                write(*,*)'cs positive',j,cs(j,k),csd(j,k)
      $              ,p0,p2,psum(1,j,k),psum(2,j,k),ncs
-               stop
+c               stop
+c           Trigger go to output
+            lgotooutput = .true.
             endif
 
 c I am not sure I understand the cs**2 (except to put the sign back to positive

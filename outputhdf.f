@@ -1247,6 +1247,25 @@ c Close the group.
 
 
 c Create a group in the file.
+      groupname = 'err'
+      CALL h5gcreate_f(file_id, groupname, group_id, error)
+
+c Write the data in this group
+
+c     Single value variables
+      rank = 1
+      data_dims(1) = 1
+      storage_dims(1) = 1
+
+      dsetname = 'lgotooutput'
+      call writehdfintmat(group_id,dsetname,
+     $ lgotooutput,storage_dims,data_dims,rank)
+
+c Close the group.
+      CALL h5gclose_f(group_id, error)
+
+
+c Create a group in the file.
       groupname = 'colncom'
       CALL h5gcreate_f(file_id, groupname, group_id, error)
 

@@ -200,9 +200,8 @@ c Except for the first time, find new position.
             endif            
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
-
-c           If lgotooutput triggered (presumably in getaccel) go to output
-            if (myid .eq. 0 .and. lgotooutput) goto 401
+c           If lgotooutput tripped, skip to end
+            if (lgotooutput) goto 401
 
 
 c For acceleration, when dt is changing, use the average of prior and
@@ -737,7 +736,9 @@ c Testing
          write(*,*)'Ptomesh particle overflow on entry'
          write(*,*)i,(xp(ipl,i),ipl=1,6)
          write(*,*)i,irl,rf,ithl,thf,ipl,pf,st,ct,sp,cp,rp,zetap,ih,hf
-         stop
+c         stop
+c        Trigger go to output
+         lgotooutput = .true.
       endif
 
 C Find the cell and cell fraction we are at.
@@ -756,7 +757,9 @@ c
          write(*,*)'i,r(nr),rp,zetap,ih,hf'
          write(*,*)i,r(nr),rp,zetap,ih,hf
          write(*,*) 'x:',x,' y:',y,' z:',z
-         stop
+c         stop
+c        Trigger go to output
+         lgotooutput = .true.
       endif
 
 c psi sin/cos
@@ -792,7 +795,9 @@ c theta sin/cos
          write(*,*)'ct,th(1),tfac,z,rp',ct,th(1),tfac,z,rp
          write(*,*)'xp',xp(1,i),xp(2,i),xp(3,i),xp(4,i),xp(5,i),xp(6,i)
          write(*,*)'x,y,z',x,y,z
-         stop
+c         stop
+c        Trigger go to output
+         lgotooutput = .true.
       endif
       ithl=interpth(ct,thf)
 
@@ -807,7 +812,9 @@ c "While not"
  402  if(rf.le.1.)goto 401
       if(irl.eq.nr)then
          write(*,*)'ptomesh rf gt 1 error:',rf,irl
-         stop
+c         stop
+c        Trigger go to output
+         lgotooutput = .true.
       else
          irl=irl+1
          rf=(rp-r(irl))/(r(irl+1)-r(irl))

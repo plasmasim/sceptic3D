@@ -967,6 +967,8 @@ c Trap errors.
          write(*,*) ih,ith,ipl,iplp1,hf,rf,tflin,pf
          write(*,'(10f8.4)')((phi(ii,jj,ipl),ii=1,10),jj=1,10)
 c         stop
+c        Trigger go to output
+         lgotooutput = .true.
       endif
 
 

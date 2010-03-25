@@ -201,6 +201,9 @@ c Except for the first time, find new position.
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
 
+c           If lgotooutput triggered (presumably in getaccel) go to output
+            if (myid .eq. 0 .and. lgotooutput) goto 401
+
 
 c For acceleration, when dt is changing, use the average of prior and
 c present values: dtnow.

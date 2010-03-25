@@ -304,3 +304,10 @@ c     Mcr common block
      $     ,mcrxpinjd, mcrninjd
      $     ,mcrtotflux
 
+c*********************************************************************
+c Error handling and debugging
+c     Flag to go to output
+      logical lgotooutput
+
+c     Error handling common block
+      common /err/lgotooutput

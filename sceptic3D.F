@@ -122,6 +122,8 @@ c     artificially to zero
       lat0=.false.  
       lap0=.false.
 
+c     Don't go to output unless triggered
+      lgotooutput = .false.
 
       ieradset=.false.
 
@@ -784,6 +786,10 @@ c     default we also evaluate at the probe surface
 c     Main particle advance, including collisions.
          
          call padvnc(dt,icolntype,colnwt,i,maccel,ierad)
+c        If lgotooutput triggered go to output (only master node outputs,
+c          so for now set up so only does this if lgotooutput triggered
+c          on master node).
+         if (myid .eq. 0 .and. lgotooutput) goto 50
 
 
 c     Reduce back the flux and distribution data from the particle advance.
@@ -850,7 +856,7 @@ c Average various fluxes and fields:
   
       call sumreduce()
 
-      if(myid.eq.0)then
+ 50   if(myid.eq.0)then
 c Write the output files.
          call output(dt,i-1,fave,icolntype,colnwt)
          call outputhdf(dt,i-1,fave,icolntype,colnwt)

@@ -1261,6 +1261,41 @@ c     Single value variables
       call writehdfintmat(group_id,dsetname,
      $ lgotooutput,storage_dims,data_dims,rank)
 
+      dsetname = 'lsavephi'
+      call writehdfintmat(group_id,dsetname,
+     $ lsavephi,storage_dims,data_dims,rank)
+
+c     Variable arrays
+      if (lsavephi) then
+
+      dsetname = 'phisave'
+      rank = 4
+      data_dims(1) = nr+1
+      data_dims(2) = nth+1
+      data_dims(3) = npsi+1
+      data_dims(4) = min(maxsteps,nstepssave)
+      storage_dims(1) = nrsizesave+1
+      storage_dims(2) = nthsizesave+1
+      storage_dims(3) = npsisizesave+1
+      storage_dims(4) = nstepssave
+      call writehdfrealmat(group_id,dsetname,
+     $  phisave,storage_dims,data_dims,rank)
+
+      dsetname = 'phiaxissave'
+      rank = 4
+      data_dims(1) = nr+1
+      data_dims(2) = 2
+      data_dims(3) = npsi+1
+      data_dims(4) = min(maxsteps,nstepssave)
+      storage_dims(1) = nrsizesave+1
+      storage_dims(2) = 2
+      storage_dims(3) = npsisizesave+1
+      storage_dims(4) = nstepssave
+      call writehdfrealmat(group_id,dsetname,
+     $  phiaxissave,storage_dims,data_dims,rank)
+
+      endif
+
 c Close the group.
       CALL h5gclose_f(group_id, error)
 

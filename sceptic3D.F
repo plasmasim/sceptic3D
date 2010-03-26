@@ -751,6 +751,26 @@ c     in diags, called only by myid=0, not myid2=0
       call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 #endif
 
+c        For debugging: Save phi for first nstepssave if small grid
+         lsavephi = .true.
+         if (lsavephi .and.
+     $     nr .le. nrsizesave .and.
+     $     nth .le. nthsizesave .and.
+     $     npsi .le. npsisizesave .and.
+     $     i .le. nstepssave) then
+            do j=0,npsi
+               do k=0,nth
+                  do l=0,nr
+                     phisave(l,k,j,i) = phi(l,k,j)
+                     phiaxissave(l,1,j,i) = phiaxis(l,1,j)
+                     phiaxissave(l,2,j,i) = phiaxis(l,2,j)
+                  enddo
+               enddo
+            enddo
+         elseif (i .le. nstepssave) then
+            lsavephi = .false.
+         endif
+
          if (myid.eq.0) then
 
             

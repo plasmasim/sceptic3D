@@ -308,6 +308,17 @@ c*********************************************************************
 c Error handling and debugging
 c     Flag to go to output
       logical lgotooutput
+c     Flag indicating whether to save potential for nstepsssave steps
+      logical lsavephi
+c     Max grid size and steps to save
+      integer nrsizesave,nthsizesave,npsisizesave,nstepssave
+      parameter (nrsizesave=101,nthsizesave=11,npsisizesave=11
+     $  ,nstepssave=2001)
+c The potential normalized to Te/e
+      real phisave(0:nrsizesave,0:nthsizesave,0:npsisizesave,
+     $  nstepssave)
+c The potential on axis (cos(theta)=+-1) before averaging
+      real phiaxissave(0:nrsizesave,2,0:npsisizesave,nstepssave)
 
 c     Error handling common block
-      common /err/lgotooutput
+      common /err/lgotooutput,lsavephi,phisave,phiaxissave

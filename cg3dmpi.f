@@ -449,13 +449,13 @@ c Sum akden over all the participating nodes
 
 c     Test convergence (Only every 5 steps and after a reasonable amount
 c     of iterations)
-         if (mod(icg_k+2,5).eq.0.and.icg_k.gt.0.8*icg_prec-5) then
+c         if (mod(icg_k+2,5).eq.0.and.icg_k.gt.0.8*icg_prec-5) then
             call testifconverged(cg_eps,deltamax,
      $           lconverged,cg_comm)
 c            if(mpiid.eq.1)   write(*,*) icg_k,deltamax,lconverged
-         endif
+c         endif
 
-         if(lconverged.and.icg_k.ge.2)goto 11
+         if(lconverged.and.icg_k.ge.1)goto 11
 
 
          call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
@@ -616,7 +616,8 @@ c Loki's version of mpich seems not to like MPI_IN_PLACE
 c***********************************************************************
 c Cut here and throw the rest away for the basic routines
 c***********************************************************************
-      subroutine fcalc3Dpar(Li,Lj,Lk,ni,nj,nk,mi,eps,k,cg_comm,myid2)
+      subroutine fcalc3Dpar(Li,Lj,Lk,ni,nj,nk,mi,eps,k,cg_comm,myid2,
+     $     maxdphi)
 
 
       include 'piccom.f'
@@ -626,7 +627,7 @@ c***********************************************************************
       integer nd
       parameter (nd=3,nd2=nd*2)
 
-      real cg_eps,cg_del,eps
+      real cg_eps,cg_del,eps,maxdphi
       integer icg_k,icg_mi,mi
       
 
@@ -665,11 +666,13 @@ c testing arrays
 
       
       
-c Write x, the temporary potential file, in phi
+c Write x, the temporary potential file, to phi, and find maxchange
       if(myid2.eq.0) then
+         maxdphi=0.
          do k=1,npsiused
             do j=1,nthused
                do i=2,ni-1
+                  maxdphi=max(maxdphi,abs(phi(i,j,k)-x(i,j,k)))
                   phi(i,j,k)=x(i,j,k)
                enddo
             enddo

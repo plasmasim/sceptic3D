@@ -26,18 +26,17 @@ c     or run the code, you do so at your own risk.
 c___________________________________________________________________________
 
 c******************************************************************
-      subroutine shielding3D(dt,n1)
+      subroutine shielding3D(dt,n1,dconverge,niter,maxdphi)
 
       include 'piccom.f'
-      real dt,dconverge
-      integer maxits
+      real dt,dconverge,maxdphi
+      integer maxits,niter
       integer n1
       real b(nrsize-1,0:nthsize,0:npsisize)
      $     ,x(nrsize-1,0:nthsize,0:npsisize)
       integer kk1,kk2
 
       maxits=2*(nrused*nthused*npsiused)**0.333
-      dconverge=1.e-5
 
 c Set the potential on axis to what the solver found at the previous timestep
       do i=2,n1
@@ -74,16 +73,20 @@ c already been calculated in innerbc.f
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
 
 
+      maxdphi=0.
       do k=1,npsiused
          do j=1,nthused
             do i=2,n1
+               maxdphi=max(maxdphi,abs(phi(i,j,k)-x(i,j,k)))
                phi(i,j,k)=x(i,j,k)
             enddo
          enddo
       enddo
       
 c Output the number of iterations
-      write(*,'('':'',i3,$)')iter
+c     In fact, have moved this output to Sceptic3D.F
+c      write(*,'('':'',i3,$)')iter
+      niter=iter
 
 c     We set the potential on the inner shadow cell by second order
 c     extrapolation from the potential at i=1,2,3

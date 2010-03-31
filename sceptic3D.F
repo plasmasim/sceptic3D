@@ -46,6 +46,12 @@ c Communicator and id for the conjugate gradient communicator
 c In the case of cgparallel=false, myid2=0 only
 c does the potential calculation
       integer cg_comm,myid2
+
+c     Variables used for looping over CG for nonlin Poisson solver
+      real dconverge,maxdphi
+      integer niter,totiter
+      logical nonlin
+      data nonlin/.false./
       
 c Common storage
       include 'piccom.f'
@@ -298,6 +304,7 @@ c restore defaults on read error.
          if(string(1:5) .eq. '--at0') lat0=.true.
          if(string(1:5) .eq. '--ap0') lap0=.true.
          if(string(1:10) .eq. '--localinj') localinj=.true.
+         if(string(1:8) .eq. '--nonlin') nonlin=.true.
         
 c     MC Reinject variables
          if(string(1:7) .eq. '--mcrnt') read(string(8:),*)mcrntheta
@@ -440,6 +447,7 @@ c         write(*,*)'Command line and defaults:'
  502     format('l_d=',f10.3,' Ti=',f7.3,' Steps=',i4,
      $        ' dt=',f6.4,' rmax=',f5.1,' vd=',f6.3,' vp=',f8.4)
          if(lsubcycle)write(*,*)'Subcycling on!'
+         if(nonlin)write(*,*)'Nonlinear Poisson solver used!'
       endif
       if(maxsteps.gt.nstepmax-1) Stop 'Too many steps requested.'
       lplot=diags.and.(myid.eq.0)
@@ -721,34 +729,71 @@ c     SCEPTIC2D uses the potential at the current time step.
 
 
 c     Calculate the potential field, unless it is fixed.
-      if (myid2.eq.0.and.infdbl) then
-         call fcalc_infdbl(dt)
-      elseif (myid2.eq.0.and.debyelen.eq.0) then
-         call fcalc(dt)
-      else
-         call shielding_bc(dt,rshield,icolntype,colnwt)
-         if(.not.cgparallel.and.myid2.eq.0) then
-            call shielding3D(dt,rshield)
+         if (myid2.eq.0.and.infdbl) then
+            call fcalc_infdbl(dt)
+         elseif (myid2.eq.0.and.debyelen.eq.0) then
+            call fcalc(dt)
+         else
+            totiter=0
+            maxdphi=1.
+            dconverge=1.e-5
+            call shielding_bc(dt,rshield,icolntype,colnwt)
+            if(.not.cgparallel.and.myid2.eq.0) then
+               if(nonlin) then
+ 620              if((maxdphi.gt.1.e-5).or.(dconverge.gt.1.1e-5)) then
+                     dconverge=max((maxdphi/nrused/debyelen)**2,1.e-5)
+                     call shielding3D(dt,rshield,dconverge,niter,
+     $                    maxdphi)
+                     totiter=totiter+niter
+                     goto 620
+                  endif
+               else
+                  call shielding3D(dt,rshield,dconverge,niter,maxdphi)
+                  totiter=niter
+               endif
+               write(*,'('':'',i3,$)')totiter
 #ifdef MPI
-         elseif(cgparallel.and.myid2.ge.0) then
-            call shielding3D_par(dt,rshield,cg_comm,myid2)
-            
+            elseif(cgparallel.and.myid2.ge.0) then
+               if(nonlin) then
+ 629              if((maxdphi.gt.1.e-5).or.(dconverge.gt.1.1e-5)) then
+                     dconverge=max((maxdphi/nrused/debyelen)**2,1.e-5)
+                     call shielding3D_par(dt,rshield,cg_comm,myid2,
+     $                    dconverge,niter,maxdphi)
+                     totiter=totiter+niter
+c     Broadcast phi and phiaxis for next CG loop
+                     call MPI_BCAST(phi,
+     $                    (nrsize+1)*(nthsize+1)*(npsiused+2),
+     $                    MPI_REAL,0,cg_comm,ierr)
+                     call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
+     $                    MPI_REAL,0,cg_comm,ierr)
+                     call MPI_BCAST(maxdphi,1,
+     $                    MPI_REAL,0,cg_comm,ierr)
+                     call MPI_BARRIER(cg_comm,ierr)
+                     goto 629
+                  endif
+               else
+                  call shielding3D_par(dt,rshield,cg_comm,myid2,
+     $                 dconverge,niter,maxdphi)
+                  totiter=niter
+               endif
+c     Output the total number of CG steps
+               if(myid2.eq.0) write(*,'('':'',i3,$)')totiter
 #endif
-         endif
-      endif  
-
+            endif
+         endif  
+         
   
 
 c     Broadcast back to the slaves.
 #ifdef MPI
-      call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2), MPI_REAL,0
-     $     ,MPI_COMM_WORLD,ierr)
-      call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2), MPI_REAL,0
-     $     ,MPI_COMM_WORLD,ierr)
-      call MPI_BCAST(adeficit,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
+         call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
+     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
+         call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
+     $        MPI_REAL,0,MPI_COMM_WORLD,ierr)
+         call MPI_BCAST(adeficit,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 c     Averein is always broadcasted from 0 since it is calculated
 c     in diags, called only by myid=0, not myid2=0
-      call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
+         call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 #endif
 
 c        For debugging: Save phi for first nstepssave if small grid
@@ -963,6 +1008,7 @@ c Help section
       write(*,*)' --rhoinf.ff specify constant injection rate, rather',
      $     ' than particle number.'
       write(*,*)' --sp use parallel bloc solver, '
+      write(*,*)' --nonlin use non-linear Poisson solver, '
       write(*,*)' --bcphi(0) BC potl (0:spherical sym, ',
      $     '1 : Quasi neutrality on outer 15%,',
      $     '    2: Phiout=0, 3: dPhiout/dz=0,',

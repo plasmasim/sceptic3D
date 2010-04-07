@@ -71,6 +71,7 @@ c     Turn on these when testing convergence with changing grid size
       call nameappendint(filename,'Nr',nrused,3)
       call nameappendint(filename,'Nt',nthused,3)
       call nameappendint(filename,'Np',npsiused,3)
+      call nameappendint(filename,'s',maxsteps,4)
 
       idf=nbcat(filename,'.h5')
 
@@ -1293,6 +1294,40 @@ c     Variable arrays
       storage_dims(4) = nstepssave
       call writehdfrealmat(group_id,dsetname,
      $  phiaxissave,storage_dims,data_dims,rank)
+
+      dsetname = 'Asave'
+      rank = 6
+      data_dims(1) = nr
+      data_dims(2) = nth
+      data_dims(3) = npsi
+      data_dims(4) = nr
+      data_dims(5) = nth
+      data_dims(6) = npsi
+      storage_dims(1) = nrsizesave
+      storage_dims(2) = nthsizesave
+      storage_dims(3) = npsisizesave
+      storage_dims(4) = nrsizesave
+      storage_dims(5) = nthsizesave
+      storage_dims(6) = npsisizesave
+      call writehdfrealmat(group_id,dsetname,
+     $  Asave,storage_dims,data_dims,rank)
+
+      dsetname = 'Atsave'
+      rank = 6
+      data_dims(1) = nr
+      data_dims(2) = nth
+      data_dims(3) = npsi
+      data_dims(4) = nr
+      data_dims(5) = nth
+      data_dims(6) = npsi
+      storage_dims(1) = nrsizesave
+      storage_dims(2) = nthsizesave
+      storage_dims(3) = npsisizesave
+      storage_dims(4) = nrsizesave
+      storage_dims(5) = nthsizesave
+      storage_dims(6) = npsisizesave
+      call writehdfrealmat(group_id,dsetname,
+     $  Atsave,storage_dims,data_dims,rank)
 
       endif
 

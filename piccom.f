@@ -312,13 +312,18 @@ c     Flag indicating whether to save potential for nstepsssave steps
       logical lsavephi
 c     Max grid size and steps to save
       integer nrsizesave,nthsizesave,npsisizesave,nstepssave
-      parameter (nrsizesave=101,nthsizesave=11,npsisizesave=11
+      parameter (nrsizesave=61,nthsizesave=11,npsisizesave=11
      $  ,nstepssave=2001)
-c The potential normalized to Te/e
+c     The potential normalized to Te/e
       real phisave(0:nrsizesave,0:nthsizesave,0:npsisizesave,
      $  nstepssave)
-c The potential on axis (cos(theta)=+-1) before averaging
+c     The potential on axis (cos(theta)=+-1) before averaging
       real phiaxissave(0:nrsizesave,2,0:npsisizesave,nstepssave)
+c     The matrix A and its transpose at some step
+      real Asave(nrsizesave,nthsizesave,npsisizesave,
+     $  nrsizesave,nthsizesave,npsisizesave)
+      real Atsave(nrsizesave,nthsizesave,npsisizesave,
+     $  nrsizesave,nthsizesave,npsisizesave)
 
 c     Error handling common block
-      common /err/lgotooutput,lsavephi,phisave,phiaxissave
+      common /err/lgotooutput,lsavephi,phisave,phiaxissave,Asave,Atsave

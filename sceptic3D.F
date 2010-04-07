@@ -47,12 +47,6 @@ c In the case of cgparallel=false, myid2=0 only
 c does the potential calculation
       integer cg_comm,myid2
 
-c     Variables used for looping over CG for nonlin Poisson solver
-      real dconverge,maxdphi
-      integer niter,totiter
-      logical nonlin
-      data nonlin/.false./
-      
 c Common storage
       include 'piccom.f'
       include 'colncom.f'
@@ -62,6 +56,18 @@ c Common storage
       data success/.false./
       data readpart/.false./
       data writepart/.false./
+
+c     Variables used for looping over CG for nonlin Poisson solver
+      real dconverge,maxdphi
+      integer niter,totiter
+      logical nonlin
+      data nonlin/.false./
+
+c     Variables used for calculating matrix A for debugging
+      real inputvect(nrsize-1,0:nthsize,0:npsisize),
+     $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
+      integer n1,n2,n3,m,n,o
+
 
 c Parallel processing MPI options.
 #ifdef MPI
@@ -812,6 +818,48 @@ c        For debugging: Save phi for first nstepssave if small grid
                   enddo
                enddo
             enddo
+c           If desired step, save matrix A and its transpose
+            if (i .eq. 3) then
+               n1 = rshield
+               n2 = nthused
+               n3 = npsiused
+               do j=1,n3
+                  do k=1,n2
+                     do l=1,n1
+c                       Pass unit vectors to atimes to build A
+                        inputvect(l,k,j) = 1.
+                        call atimes(n1,n2,n3,inputvect,outputvect,
+     $                    .false.)
+                        do m=1,n3
+                           do n=1,n2
+                              do o=1,n1
+                                 Asave(o,n,m,l,k,j)=outputvect(o,n,m)
+c                                atimes may change input vector, so reset
+                                 inputvect(o,n,m) = 0.
+c                                reset output too to be safe
+                                 outputvect(o,n,m) = 0.
+                              enddo
+                           enddo
+                        enddo
+c                       Pass unit vectors to atimes to build A'
+                        inputvect(l,k,j) = 1.
+                        call atimes(n1,n2,n3,inputvect,outputvect,
+     $                    .true.)
+                        do m=1,n3
+                           do n=1,n2
+                              do o=1,n1
+                                 Atsave(o,n,m,l,k,j)=outputvect(o,n,m)
+c                                atimes may change input vector, so reset
+                                 inputvect(o,n,m) = 0.
+c                                reset output too to be safe
+                                 outputvect(o,n,m) = 0.
+                              enddo
+                           enddo
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            endif
          elseif (i .le. nstepssave) then
             lsavephi = .false.
          endif

@@ -37,6 +37,12 @@ c******************************************************************
       integer kk1,kk2
       logical lincreases
 
+c     Variables used for calculating matrix A for debugging
+      real inputvect(nrsize-1,0:nthsize,0:npsisize),
+     $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
+      integer n2,n3,j,k,l,m,n,o,jkl,mno
+
+
       maxits=2*(nrused*nthused*npsiused)**0.333
 
 c Set the potential on axis to what the solver found at the previous timestep
@@ -67,11 +73,78 @@ c already been calculated in innerbc.f
      $           *phi(1,j,k)
             x(i,j,k)=phi(i,j,k)
             x(1,j,k)=0.
+c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit atimes)
+c            b(1,j,k) = phi(1,j,k)
+c            x(1,j,k) = phi(1,j,k)
          enddo
       enddo
 
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
+
+c For debugging, save matrix A and its transpose, the vector b, and the
+c   result x
+         stepcount = stepcount+1
+         if (stepcount .eq. 20) then
+            if (lfirsttime) then
+               lfirsttime = .false.
+               rshieldingsave = n1
+               n2 = nthused
+               n3 = npsiused
+               do j=1,n3
+                  do k=1,n2
+                     do l=1,n1
+                        jkl = l + (k-1)*n1 + (j-1)*n2*n1
+c                       Pass unit vectors to atimes to build A
+                        inputvect(l,k,j) = 1.
+                        call atimes(n1,n2,n3,inputvect,outputvect,
+     $                    .false.)
+                        do m=1,n3
+                           do n=1,n2
+                              do o=1,n1
+                                 mno = o + (n-1)*n1 + (m-1)*n2*n1;
+                                 Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+                                 Amat(mno,jkl) = outputvect(o,n,m)
+c                                atimes may change input vector, so reset
+                                 inputvect(o,n,m) = 0.
+c                                reset output to to be safe
+                                 outputvect(o,n,m) = 0.
+                              enddo
+                           enddo
+                        enddo
+c                       Pass unit vectors to atimes to build A'
+                        inputvect(l,k,j) = 1.
+                        call atimes(n1,n2,n3,inputvect,outputvect,
+     $                    .true.)
+                        do m=1,n3
+                           do n=1,n2
+                              do o=1,n1
+                                 mno = o + (n-1)*n1 + (m-1)*n2*n1;
+                                 Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+                                 Atmat(mno,jkl) = outputvect(o,n,m)
+c                                atimes may change input vector, so reset
+                                 inputvect(o,n,m) = 0.
+c                                reset output to to be safe
+                                 outputvect(o,n,m) = 0.
+                              enddo
+                           enddo
+                        enddo
+                     enddo
+                  enddo
+               enddo
+               do j=1,n3
+                  do k=1,n2
+                     do l=1,n1
+                        jkl = l + (k-1)*n1 + (j-1)*n2*n1
+                        bsave(l,k,j) = b(l,k,j)
+                        bsavevect(jkl) = b(l,k,j)
+                        xsave(l,k,j) = x(l,k,j)
+                        xsavevect(jkl) = x(l,k,j)
+                     enddo
+                  enddo
+               enddo
+            endif
+         endif
 
 
 c Check whether potential increases monotonically with radius
@@ -206,6 +279,7 @@ c     search direction is the first residual
          do j=1,n2
             do i=2,n1
                res(i,j,k)=b(i,j,k)-res(i,j,k)
+               resr(i,j,k)=res(i,j,k)
             enddo
 c     Inner bc lies in the rhs of poisson's equation (b)
             res(1,j,k)=0.
@@ -214,7 +288,7 @@ c     Inner bc lies in the rhs of poisson's equation (b)
 
 c     Following line used for minimum residual method
 c        For debugging, make as before
-      call atimes(n1,n2,n3,res,resr,.false.)
+c      call atimes(n1,n2,n3,res,resr,.false.)
       
 
       call asolve(n1,n2,n3,res,z,error0)
@@ -326,8 +400,14 @@ c     matrix, returns z=Atilde^-1*b.
       
       do k=1,n3
          do j=1,n2
+c           For debugging, leave i=1 element unchanged
+c            i=1
+c            z(i,j,k) = b(i,j,k)
+
             do i=2,n1-1
                z(i,j,k)=b(i,j,k)/(-fpc(i,j)-exp(phi(i,j,k)))
+c              For debugging ,make preconditioner identiy matrix
+c               z(i,j,k)=b(i,j,k)
                error=error+b(i,j,k)**2
             enddo
          enddo
@@ -339,6 +419,8 @@ c     matrix, returns z=Atilde^-1*b.
          do j=1,n2
             z(i,j,k)=b(i,j,k)/(-fpc(i,j)-exp(phi(i,j,k))
      $           +apc(i)*gpc(j,k,5))
+c              For debugging ,make preconditioner identiy matrix
+c               z(i,j,k)=b(i,j,k)
             error=error+b(i,j,k)**2
          enddo
       enddo
@@ -373,7 +455,7 @@ c Bulk iteration for A'
 
       do k=2,n3-1
          do j=1,n2
-         i=1
+            i=1
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $        + apc(i-1)*x(i-1,j,k)
      $        + dpc(i,j+1)*x(i,j+1,k)
@@ -381,6 +463,8 @@ c Bulk iteration for A'
      $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
 c For debuggin setting diagonal to 0
 c     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+c     $        + x(i,j,k)
             do i=2,n1-2
                res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $           + apc(i-1)*x(i-1,j,k)
@@ -409,6 +493,8 @@ c     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
      $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
 c For debuggin setting diagonal to 0
 c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+c     $        + x(i,j,k)
          do i=2,n1-2
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $        + apc(i-1)*x(i-1,j,k)
@@ -435,6 +521,8 @@ c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
      $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
 c For debuggin setting diagonal to 0
 c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+c     $        + x(i,j,k)
          do i=2,n1-1
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $        + apc(i-1)*x(i-1,j,k)
@@ -504,6 +592,14 @@ c The solution x one node further the boundary
 
 
       else
+
+c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+c      i=1
+c      do k=1,n3
+c         do j=1,n2
+c            res(i,j,k)=x(i,j,k)
+c         enddo
+c      enddo
 
 c Bulk iteration for A
       

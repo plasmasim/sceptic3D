@@ -86,6 +86,10 @@ c Parallel processing MPI options.
 c      write(*,*)'Starting',myid
 
       
+c Variables for debugging
+      lfirsttime = .true.
+      stepcount = 0
+
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
       nth=nthsize
@@ -804,6 +808,9 @@ c     in diags, called only by myid=0, not myid2=0
 
 c        For debugging: Save phi for first nstepssave if small grid
          lsavephi = .true.
+c        For debugging, don't do this now since doing in shielding3D
+c          but set lsavephi to true after
+         lsavephi = .false.
          if (lsavephi .and.
      $     nr .le. nrsizesave .and.
      $     nth .le. nthsizesave .and.
@@ -863,6 +870,9 @@ c                                reset output too to be safe
          elseif (i .le. nstepssave) then
             lsavephi = .false.
          endif
+c        For debugging set lsavephi to true after
+         lsavephi = .true.
+
 
          if (myid.eq.0) then
 

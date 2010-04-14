@@ -324,6 +324,25 @@ c     The matrix A and its transpose at some step
      $  nrsizesave,nthsizesave,npsisizesave)
       real Atsave(nrsizesave,nthsizesave,npsisizesave,
      $  nrsizesave,nthsizesave,npsisizesave)
+c     The matrix A and its transpose at some step
+      real Amat(nrsizesave*nthsizesave*npsisizesave,
+     $  nrsizesave*nthsizesave*npsisizesave)
+      real Atmat(nrsizesave*nthsizesave*npsisizesave,
+     $  nrsizesave*nthsizesave*npsisizesave)
+c     Flag to indicate that something hasn't been done
+      logical lfirsttime
+c     Counter to do something at a certain step
+      integer stepcount
+c     Input and output vectors to cg3D
+      real bsave(nrsize-1,0:nthsize,0:npsisize)
+     $     ,xsave(nrsize-1,0:nthsize,0:npsisize)
+c     Input and output vectors to cg3D
+      real bsavevect((nrsize-1)*(nthsize+1)*(npsisize+1))
+     $     ,xsavevect((nrsize-1)*(nthsize+1)*(npsisize+1))
+c     Outermost r cell to consider
+      integer rshieldingsave
 
 c     Error handling common block
-      common /err/lgotooutput,lsavephi,phisave,phiaxissave,Asave,Atsave
+      common /err/lgotooutput,lsavephi,phisave,phiaxissave,Asave,Atsave,
+     $  lfirsttime,bsave,xsave,rshieldingsave,stepcount,Amat,Atmat,
+     $  bsavevect,xsavevect

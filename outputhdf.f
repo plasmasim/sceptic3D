@@ -1329,6 +1329,60 @@ c     Variable arrays
       call writehdfrealmat(group_id,dsetname,
      $  Atsave,storage_dims,data_dims,rank)
 
+      dsetname = 'Amat'
+      rank = 2
+      data_dims(1) = nr*nth*npsi
+      data_dims(2) = nr*nth*npsi
+      storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
+      storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
+      call writehdfrealmat(group_id,dsetname,
+     $  Amat,storage_dims,data_dims,rank)
+
+      dsetname = 'Atmat'
+      rank = 2
+      data_dims(1) = nr*nth*npsi
+      data_dims(2) = nr*nth*npsi
+      storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
+      storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
+      call writehdfrealmat(group_id,dsetname,
+     $  Atmat,storage_dims,data_dims,rank)
+
+      dsetname = 'bsave'
+      rank = 3
+      data_dims(1) = rshieldingsave
+      data_dims(2) = nthused
+      data_dims(3) = npsiused
+      storage_dims(1) = nrsize-1
+      storage_dims(2) = nthsize+1
+      storage_dims(3) = npsisize+1
+      call writehdfrealmat(group_id,dsetname,
+     $  bsave,storage_dims,data_dims,rank)
+
+      dsetname = 'xsave'
+      rank = 3
+      data_dims(1) = rshieldingsave
+      data_dims(2) = nthused
+      data_dims(3) = npsiused
+      storage_dims(1) = nrsize-1
+      storage_dims(2) = nthsize+1
+      storage_dims(3) = npsisize+1
+      call writehdfrealmat(group_id,dsetname,
+     $  xsave,storage_dims,data_dims,rank)
+
+      dsetname = 'bsavevect'
+      rank = 1
+      data_dims(1) = rshieldingsave*nthused*npsiused
+      storage_dims(1) = (nrsize-1)*(nthsize+1)*(npsisize+1)
+      call writehdfrealmat(group_id,dsetname,
+     $  bsavevect,storage_dims,data_dims,rank)
+
+      dsetname = 'xsavevect'
+      rank = 1
+      data_dims(1) = rshieldingsave*nthused*npsiused
+      storage_dims(1) = (nrsize-1)*(nthsize+1)*(npsisize+1)
+      call writehdfrealmat(group_id,dsetname,
+     $  xsavevect,storage_dims,data_dims,rank)
+
       endif
 
 c Close the group.

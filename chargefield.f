@@ -447,7 +447,7 @@ c Relaxed Boltzmann scheme.
                
 c want at least 40 particles for average, and relax<0.25
                relax=(40/psum(i,j,k)-1)*dr/sqrt(1+Ti)/dt
-               relax=1/max(4,relax)
+               relax=1/max(4.,relax)
 
                delta=psum_r(i,j,k)-psum(i,j,k)
                psum_r(i,j,k)=psum_r(i,j,k)-relax*delta

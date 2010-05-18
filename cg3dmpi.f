@@ -190,23 +190,6 @@ c     Index for array storage
 c     Temporary arrays for the cg solver
       real b(*),x(*),p(*),res(*),z(*),pp(*),resr(*),zz(*)
       
-
-c     Clone sizing parameters from piccom.f for debugging
-      integer nrsizeclone,nthsizeclone,npsisizeclone
-      parameter (nrsizeclone=306,nthsizeclone=31,npsisizeclone=31)
-c     Variables used for calculating matrix A for debugging
-      real inputvect(0:nrsizeclone,0:nthsizeclone,0:npsisizeclone),
-     $  outputvect(0:nrsizeclone,0:nthsizeclone,0:npsisizeclone),
-     $  inputvect2(0:nrsizeclone,0:nthsizeclone,0:npsisizeclone),
-     $  outputvect2(0:nrsizeclone,0:nthsizeclone,0:npsisizeclone)
-      integer n1,n2,n3,j,k,l,m,n,o
-      logical lperiodsave(ndimssave)
-      logical lflagsave
-      data lperiodsave(1)/.false./lperiodsave(2)/.false./
-     $  lperiodsave(3)/.false./
-      integer mpiidsave
-
-      save lflagsave
  
 c-------------------------------------------------------------------
 
@@ -527,149 +510,6 @@ c     After a loop is finished, fortran seems to increase the counter one more
 c-------------------------------------------------------------------
  11   continue
 
-
-c For debugging, save matrix A and its transpose
-      if (lsavemat .and. stepcount .eq. saveatstep) then
-c        First, define mpi block structure for Asave
-         Lisave = nrsizesave+1
-         Ljsave = nthsizesave+1
-         Lksave = npsisizesave+1
-         ifullsave(1)=nrsizesave+1
-         ifullsave(2)=nthsizesave+1
-         ifullsave(3)=nk+1
-         idimssave(1)=idim1
-         idimssave(2)=idim2
-         idimssave(3)=idim3
-         iudssave(1)=ni+1
-         iudssave(2)=nj
-         iudssave(3)=nk
-         call bbdydefine(ndimssave,idimssave,ifullsave,iudssave,
-     $     iorigsave,iLssave)
-         lflagsave = .false.
-         kc=-1
-         call bbdy(cg_comm,iLssave,iudssave,Asave,kc,iorigsave,
-     $     ndimssave,idimssave,lperiodsave,
-     $     icoordssave,iLcoordssave,mysidesave,
-     $     myorigsave,myorig1save,myorig2save,myorig3save,
-     $     icommcartsave,mycartidsave,mpiidsave,
-     $     lflagsave,outsave,innsave)
-         rshieldingsave = ni-1
-         n1 = mysidesave(1)-2
-         n2 = mysidesave(2)-2
-         n3 = mysidesave(3)-2
-c        For debugging, see what the various values are
-c         write (*,*) 'mysidesave',mysidesave(1),mysidesave(2),
-c     $     mysidesave(3)
-c         write (*,*) 'iudssave',ni,nj,nk
-c         write (*,*) 'n',n1,n2,n3
-c         write (*,*) 'myorigsave',myorig1save,myorig2save,myorig3save
-c         write (*,*) 'myorig',myorig1,myorig2,myorig3
-c         write (*,*) 'myside',myside(1),myside(2),myside(3)
-c         write (*,*) 'idim',idim1,idim2,idim3
-
-         do j=1,n3
-            do k=1,n2
-               do l=1,n1
-c                 Pass unit vectors to atimes to build A
-                  inputvect(l,k,j) = 1.
-                  call atimesmpi(myside(1),myside(2),myside(3),
-     $              Li,Lj,Lk, inputvect,
-     $              outputvect,
-     $              u(myorig), apc(myorig1), bpc(myorig1),
-     $              cpc(myorig1+Li*myorig2),
-     $              dpc(myorig1+Li*myorig2),
-     $              epc(myorig1+Li*myorig2),
-     $              fpc(myorig1+Li*myorig2),
-     $              gpc(myorig2,myorig3,1), out,
-     $              .false.)
-cc                 For debugging, set Asave to diagonal diagnostic matrix
-c                  Asave(l+myorig1save-1,k+myorig2save,
-c     $              j+myorig3save,l+myorig1save-1,
-c     $              k+myorig2save,j+myorig3save)
-c     $              = 100*(j+myorig3save) + 10*(k+myorig2save)
-c     $              + (l+myorig1save-1) + mpiid*1000
-                  do m=1,nk
-                     do n=1,nj
-                        do o=1,ni
-                           Asave(o+myorig1save-1,
-     $                           n+myorig2save,m+myorig3save,
-     $                           l+myorig1save-1,
-     $                           k+myorig2save,j+myorig3save) =
-     $                       outputvect(o,n,m)
-c                          atimes may change input vector, so reset
-                           inputvect(o,n,m) = 0.
-c                          reset output to to be safe
-                           outputvect(o,n,m) = 0.
-                        enddo
-                     enddo
-                  enddo
-c                 Pass unit vectors to atimes to build A'
-                  inputvect(l,k,j) = 1.
-c                  call atimesmpi(myside(1),myside(2),myside(3),
-c     $              Li,Lj,Lk,inputvect(myorig1-1,myorig2-1,myorig3-1),
-c     $              outputvect(myorig1-1,myorig2-1,myorig3-1),u(myorig),
-c     $              apc(myorig1), bpc(myorig1), cpc(myorig1+Li*myorig2),
-c     $              dpc(myorig1+Li*myorig2), epc(myorig1+Li*myorig2),
-c     $              fpc(myorig1+Li*myorig2), gpc(myorig2,myorig3,1),out,
-c     $              .true.)
-                  do m=1,n3
-                     do n=1,n2
-                        do o=1,n1
-                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
-c                          atimes may change input vector, so reset
-                           inputvect(o,n,m) = 0.
-c                          reset output to to be safe
-                           outputvect(o,n,m) = 0.
-                        enddo
-                     enddo
-                  enddo
-               enddo
-            enddo
-         enddo
-c        For debugging, transfer local part of A and At to master
-         kc=-1
-         n1 = ni
-         n2 = nj
-         n3 = nk
-         do j=0,n3
-            do k=0,n2
-               do l=0,n1
-c                 For debugging, add barrier
-                  call MPI_BARRIER(cg_comm,ierr)
-                  call bbdy(cg_comm,iLssave,iudssave,Asave(0,0,0,l,k,j),
-     $              kc,iorigsave,
-     $              ndimssave,idimssave,lperiodsave,
-     $              icoordssave,iLcoordssave,mysidesave,
-     $              myorigsave,myorig1save,myorig2save,myorig3save,
-     $              icommcartsave,mycartidsave,mpiidsave,
-     $              lflagsave,outsave,innsave)
-c                 For debugging, add barrier
-                  call MPI_BARRIER(cg_comm,ierr)
-c                  call bbdy(cg_comm,iLs,iuds,Atsave(1,1,1,l,k,j),
-c     $              kc,iorig,ndims,idims,lperiod,
-c     $              icoords,iLcoords,myside,myorig,myorig1,myorig2,
-c     $              myorig3,
-c     $              icommcart,mycartid,mpiid,lflag,out,inn)
-c                 For debugging, add barrier
-                  call MPI_BARRIER(cg_comm,ierr)
-               enddo
-            enddo
-         enddo
-c        Signal that bbdy needs to reset since calling it with the
-c          save parameters changed saved variables
-         lflag = .false.
-      endif
-
-
-      kc=-1
-c     For debugging, transfer local part of b to the master node
-      call bbdy(cg_comm,iLs,iuds,b,kc,iorig,ndims,idims,lperiod,
-     $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
-     $        icommcart,mycartid,mpiid,lflag,out,inn)
-
-
-
-
 c Do the final mpi_gather [or allgather if all processes need
 c the result].
       kc=-1
@@ -677,6 +517,12 @@ c the result].
       call bbdy(cg_comm,iLs,iuds,x,kc,iorig,ndims,idims,lperiod,
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
+
+c For debugging, also gather b for saving
+      call bbdy(cg_comm,iLs,iuds,b,kc,iorig,ndims,idims,lperiod,
+     $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $        icommcart,mycartid,mpiid,lflag,out,inn)
+
 
       cg_del=deltamax
       ierr=icg_k
@@ -971,7 +817,7 @@ c Write x, the temporary potential file, to phi, and find maxchange
       endif
 
 
-c For debugging, save matrix A and its transpose
+c For debugging, save matrix A and its transpose, as well as b and x
       if (lsavemat .and. stepcount.eq.saveatstep) then
 c        Set flag for cg3dmpi to only multiply by A
          lAdebug = .true.
@@ -979,6 +825,23 @@ c        Set flag for cg3dmpi to only multiply by A
          rshieldingsave = n1
          n2 = nthused
          n3 = npsiused
+c        First, initialize bsave and xsave just in case
+         do k=0,npsisizesave
+            do j=0,nthsizesave
+               do i=1,nrsizesave-1
+                  bsave(i,j,k) = 0.
+                  xsave(i,j,k) = 0.
+               enddo
+            enddo
+         enddo
+         do k=0,n3
+            do j=0,n2
+               do i=1,n1
+                  bsave(i,j,k) = b(i,j,k)
+                  xsave(i,j,k) = x(i,j,k)
+               enddo
+            enddo
+         enddo
          do j=1,n3
             do k=1,n2
                do l=1,n1
@@ -986,23 +849,13 @@ c        Set flag for cg3dmpi to only multiply by A
                   xsave(l,k,j) = x(l,k,j)
 c                 Pass unit vectors to atimes to build A
                   inputvect(l,k,j) = 1.
-      call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
-     $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)
-     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)
-     $     ,b(1,0,0),inputvect(1,0,0),p(1,0,0) ,outputvect(1,0,0)
-     $     ,z(1,0,0) ,pp(1,0,0),resr(1,0,0) ,zz(1,0
-     $     ,0))
-cc                 For debugging, check for any non-zero elements
-c                  do m=0,npsisize
-c                     do n=0,nthsize
-c                        do o=0,nrsize
-c                           if (outputvect(o,n,m) .ne. 0) then
-c                              write (*,*) 'nonzero element: ',
-c     $                          outputvect(o,n,m), o, n, m
-c                           endif
-c                        enddo
-c                     enddo
-c                  enddo
+                  lAtranspose = .false.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0),inputvect(1,0,0)
+     $              ,p(1,0,0),outputvect(1,0,0),z(1,0,0),pp(1,0,0)
+     $              ,resr(1,0,0),zz(1,0,0))
                   do m=1,n3
                      do n=1,n2
                         do o=1,n1
@@ -1014,44 +867,29 @@ c                          reset output to to be safe
                         enddo
                      enddo
                   enddo
-cc                 Pass unit vectors to atimes to build A'
-c                  inputvect(l,k,j) = 1.
-c                  call atimes(n1,n2,n3,inputvect,outputvect,
-c     $              .true.)
-c                  do m=1,n3
-c                     do n=1,n2
-c                        do o=1,n1
-c                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
-cc                          atimes may change input vector, so reset
-c                           inputvect(o,n,m) = 0.
-cc                          reset output to to be safe
-c                           outputvect(o,n,m) = 0.
-c                        enddo
-c                     enddo
-c                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  lAtranspose = .true.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0),inputvect(1,0,0)
+     $              ,p(1,0,0),outputvect(1,0,0),z(1,0,0),pp(1,0,0)
+     $              ,resr(1,0,0),zz(1,0,0))
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
                enddo
             enddo
          enddo
-cc        For debugging, save b and x
-c         if(myid2.eq.0) then
-c           First, initialize bsave and xsave just in case
-c            do k=0,npsisizesave
-c               do j=0,nthsizesave
-c                  do i=1,nrsizesave-1
-c                     bsave(i,j,k) = 0.
-c                     xsave(i,j,k) = 0.
-c                  enddo
-c               enddo
-c            enddo
-c            do k=0,nk
-c               do j=0,nj
-c                  do i=0,ni
-c                     bsave(i,j,k) = b(i,j,k)
-c                     xsave(i,j,k) = x(i,j,k)
-c                  enddo
-c               enddo
-c            enddo
-c         endif
       endif
 
       k=icg_k

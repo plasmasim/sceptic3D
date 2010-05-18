@@ -39,29 +39,11 @@ c     Flag indicating whether to save matrices from Poisson calculation
       logical lsavemat
 c     Step to save at
       integer saveatstep
-c     Flag signaling for solver to only multiply by A (not iterate)
+c     Flags signaling for solver to only multiply by A or A' (not iterate)
       logical lAdebug
-c     Dimensional structure for Asave (see piccomcg.f)
-c     Not included in common block for now, but don't really need to be
-c       since only used in one function
-      integer ndimssave
-      parameter (ndimssave=3)
-      integer iLssave(ndimssave+1)
-      integer iudssave(ndimssave)
-      integer idimssave(ndimssave)
-      integer icoordssave(ndimssave)
-      integer iLcoordssave(ndimssave+1)
-      integer norigmaxsave
-      parameter (norigmaxsave=1000)
-      integer iorigsave(norigmaxsave)
-      integer mysidesave(ndimssave)
-      integer myorigsave,myorig1save,myorig2save,myorig3save
-      integer ifullsave(ndimssave)
-      logical outsave,innsave
-      integer mycartidsave
-      integer icommcartsave
+      logical lAtranspose
 
 c     Error handling common block
       common /err/lgotooutput,lsavephi,phisave,phiaxissave,Asave,Atsave,
      $  lfirsttime,bsave,xsave,rshieldingsave,stepcount,Amat,Atmat,
-     $  bsavevect,xsavevect,lsavemat,saveatstep,lAdebug
+     $  bsavevect,xsavevect,lsavemat,saveatstep,lAdebug,lAtranspose

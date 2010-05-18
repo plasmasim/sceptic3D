@@ -270,8 +270,8 @@ c     Inner bc lies in the rhs of poisson's equation (b)
       enddo
 
 c     Following line used for minimum residual method
-c        For debugging, make as before
-      call atimes(n1,n2,n3,res,resr,.false.)
+cc        For debugging, make as before
+c      call atimes(n1,n2,n3,res,resr,.false.)
       
 
       call asolve(n1,n2,n3,res,z,error0)
@@ -331,9 +331,9 @@ c     Main loop
             enddo
          enddo
          ak=bknum/akden
-c         call atimes(n1,n2,n3,pp,zz,.true.)
-c        For debugging, make symmetric
-         call atimes(n1,n2,n3,pp,zz,.false.)
+         call atimes(n1,n2,n3,pp,zz,.true.)
+cc        For debugging, make symmetric
+c         call atimes(n1,n2,n3,pp,zz,.false.)
          
          deltamax=0.
          do k=1,n3

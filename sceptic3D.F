@@ -67,7 +67,7 @@ c     Variables used for looping over CG for nonlin Poisson solver
 c     Variables used for calculating matrix A for debugging
       real inputvect(nrsize-1,0:nthsize,0:npsisize),
      $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
-      integer n1,n2,n3,m,n,o, one
+      integer n1,n2,n3,m,n,o
 
 
 c Parallel processing MPI options.
@@ -91,7 +91,6 @@ c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
       saveatstep = 2
-      one = 0
 
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
@@ -851,12 +850,6 @@ c               the vector b, and the result x
                      n1 = rshield
                      n2 = nthused
                      n3 = npsiused
-                     if (cgparallel) then
-c                       Density is stored on different grid for parallel
-                        one = 1
-                     else
-                        one = 0
-                     endif
                      do j=1,n3
                         do k=1,n2
                            do l=1,n1
@@ -867,17 +860,10 @@ c                       Density is stored on different grid for parallel
                                  do n=1,n2
                                     do o=1,n1
                                        mno = o + (n-1)*n1 + (m-1)*n2*n1;
-c                                       Amat(mno,jkl)
-c     $                                   = Asave(o+one,n+one,m+one,
-c     $                                           l+one,k+one,j+one)
-cc                                      For debugging, don't do this
                                        Amat(mno,jkl)
      $                                   = Asave(o,n,m,l,k,j)
-c                                       Atmat(mno,jkl)
-c     $                                   = Atsave(o,n,m,l,k,j)                                    enddo
                                        Atmat(mno,jkl)
-     $                                   = Atsave(o+one,n+one,m+one,
-     $                                            l+one,k+one,j+one)                                    enddo
+     $                                   = Atsave(o,n,m,l,k,j)                                    enddo
                                     enddo
                                  enddo
                               enddo

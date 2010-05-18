@@ -7,6 +7,7 @@ c     Particle index
       integer ipart
 c Common data
       include 'piccom.f'
+      include 'errcom.f'
 c Functions used
       real ran0
 c Local variables
@@ -78,6 +79,7 @@ c Input variables
       real colnwt
 c Common data
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 c Functions used
       real dot
@@ -192,6 +194,7 @@ c     Collision frequency
       real colnwt
 c Common data
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 c Functions used
       real ran0, gasdev, dot

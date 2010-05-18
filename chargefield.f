@@ -28,6 +28,7 @@ c___________________________________________________________________________
       subroutine chargetomesh()
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 
 c      ninner=0
 
@@ -119,6 +120,7 @@ c      implicit none
       integer i
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 
 c Cyclic ipl in the poloidal direction
       integer iplp
@@ -390,6 +392,7 @@ c Calculate potential phi from rho.
       subroutine fcalc(dt)
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       real phi0mphi1(0:nthsize,0:npsisize),delphi0(0:nthsize,0:npsisize)
       parameter (nthp1=nthsize+1)
       parameter (npsip1=npsisize+1)
@@ -671,6 +674,7 @@ c Be careful with variables in this routine.
       real accel(3)
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 c Radial, Theta and Phi accelerations
       real ar,at,ap
       real ct,st,cp,sp,rp
@@ -987,6 +991,7 @@ c***********************************************************************
 c**********************************************************************
       subroutine esforce(ir,qp,fz,epz,fbz,fx,epx,fbx,fy,epy,fby)
       include 'piccom.f'
+      include 'errcom.f'
 c 3D version of esforce
 c Return the charge qp, esforce fz,x,y , and electron pressure force epz,x,y.
 

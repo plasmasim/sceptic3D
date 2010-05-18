@@ -29,6 +29,7 @@ c******************************************************************
       subroutine shielding3D(dt,n1,dconverge,niter,maxdphi)
 
       include 'piccom.f'
+      include 'errcom.f'
       real dt,dconverge,maxdphi
       integer maxits,niter
       integer n1
@@ -82,69 +83,50 @@ c            x(1,j,k) = phi(1,j,k)
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
 
-c For debugging, save matrix A and its transpose, the vector b, and the
-c   result x
-         stepcount = stepcount+1
-         if (stepcount .eq. 20) then
-            if (lfirsttime) then
-               lfirsttime = .false.
-               rshieldingsave = n1
-               n2 = nthused
-               n3 = npsiused
-               do j=1,n3
-                  do k=1,n2
-                     do l=1,n1
-                        jkl = l + (k-1)*n1 + (j-1)*n2*n1
-c                       Pass unit vectors to atimes to build A
-                        inputvect(l,k,j) = 1.
-                        call atimes(n1,n2,n3,inputvect,outputvect,
-     $                    .false.)
-                        do m=1,n3
-                           do n=1,n2
-                              do o=1,n1
-                                 mno = o + (n-1)*n1 + (m-1)*n2*n1;
-                                 Asave(o,n,m,l,k,j) = outputvect(o,n,m)
-                                 Amat(mno,jkl) = outputvect(o,n,m)
-c                                atimes may change input vector, so reset
-                                 inputvect(o,n,m) = 0.
-c                                reset output to to be safe
-                                 outputvect(o,n,m) = 0.
-                              enddo
-                           enddo
+c For debugging, save matrix A and its transpose
+      if (lsavemat .and. stepcount.eq.saveatstep) then
+         rshieldingsave = n1
+         n2 = nthused
+         n3 = npsiused
+         do j=1,n3
+            do k=1,n2
+               do l=1,n1
+                  bsave(l,k,j) = b(l,k,j)
+                  xsave(l,k,j) = x(l,k,j)
+c                 Pass unit vectors to atimes to build A
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect,
+     $              .false.)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
                         enddo
-c                       Pass unit vectors to atimes to build A'
-                        inputvect(l,k,j) = 1.
-                        call atimes(n1,n2,n3,inputvect,outputvect,
-     $                    .true.)
-                        do m=1,n3
-                           do n=1,n2
-                              do o=1,n1
-                                 mno = o + (n-1)*n1 + (m-1)*n2*n1;
-                                 Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
-                                 Atmat(mno,jkl) = outputvect(o,n,m)
-c                                atimes may change input vector, so reset
-                                 inputvect(o,n,m) = 0.
-c                                reset output to to be safe
-                                 outputvect(o,n,m) = 0.
-                              enddo
-                           enddo
+                     enddo
+                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect,
+     $              .true.)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
                         enddo
                      enddo
                   enddo
                enddo
-               do j=1,n3
-                  do k=1,n2
-                     do l=1,n1
-                        jkl = l + (k-1)*n1 + (j-1)*n2*n1
-                        bsave(l,k,j) = b(l,k,j)
-                        bsavevect(jkl) = b(l,k,j)
-                        xsave(l,k,j) = x(l,k,j)
-                        xsavevect(jkl) = x(l,k,j)
-                     enddo
-                  enddo
-               enddo
-            endif
-         endif
+            enddo
+         enddo
+      endif
 
 
 c Check whether potential increases monotonically with radius
@@ -250,6 +232,7 @@ c     Actually, A is not exactly symmetric (especially for coarse grids)
 c       so use biconjugate gradient method from Press.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       integer itmax,iter
       real eps,delta,deltamax
@@ -288,7 +271,7 @@ c     Inner bc lies in the rhs of poisson's equation (b)
 
 c     Following line used for minimum residual method
 c        For debugging, make as before
-c      call atimes(n1,n2,n3,res,resr,.false.)
+      call atimes(n1,n2,n3,res,resr,.false.)
       
 
       call asolve(n1,n2,n3,res,z,error0)
@@ -348,9 +331,9 @@ c     Main loop
             enddo
          enddo
          ak=bknum/akden
-         call atimes(n1,n2,n3,pp,zz,.true.)
+c         call atimes(n1,n2,n3,pp,zz,.true.)
 c        For debugging, make symmetric
-c         call atimes(n1,n2,n3,pp,zz,.false.)
+         call atimes(n1,n2,n3,pp,zz,.false.)
          
          deltamax=0.
          do k=1,n3
@@ -390,6 +373,7 @@ c     Preconditioning subroutine. if Atilde is the preconditioning
 c     matrix, returns z=Atilde^-1*b.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       real b(nrsize-1,0:nthsize,0:npsisize), z(nrsize-1,0:nthsize
      $     ,0:npsisize)
@@ -434,6 +418,7 @@ c **************************************
       subroutine atimes(n1,n2,n3,x,res,ltrnsp)
 
       include 'piccom.f'
+      include 'errcom.f'
 c Outputs res=Ax or A'x, where A is the finite volumes stiffness matrix
       real x(nrsize-1,0:nthsize,0:npsisize), res(nrsize-1
      $     ,0:nthsize ,0:npsisize)
@@ -491,7 +476,7 @@ c     $        + x(i,j,k)
      $     + dpc(i,j+1)*x(i,j+1,k)
      $     + cpc(i,j-1)*x(i,j-1,k)
      $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
-c For debuggin setting diagonal to 0
+c For debugging setting diagonal to 0
 c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
 c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
 c     $        + x(i,j,k)

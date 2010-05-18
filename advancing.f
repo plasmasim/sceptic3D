@@ -33,6 +33,7 @@ c Advance the particles
       real dt,dtin
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 
       real accel(3)
@@ -726,6 +727,7 @@ c If ih.ne.0 on entry, calculate the half-mesh postion, zetap,ih,hf.
 c      common /angles/ct,st,cp,sp,rp
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       real rsp
       real x,y,z
       external interpth,interppsi
@@ -851,6 +853,7 @@ c     well as the probe potential.
       subroutine shielding_bc(dt,n1,icolntype,colnwt)
 
       include 'piccom.f'
+      include 'errcom.f'
       real dt
       integer n1
       real phislopeconst,phislopefac
@@ -960,6 +963,7 @@ c***********************************************************************
 c Initialization for Collisions
       subroutine colninit(colnwt,icolntype)
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
       integer i
 c      write(*,*)'Initialized collisions',colnwt,icolntype
@@ -1005,6 +1009,7 @@ c Must set Eneutral to zero by default.
 c*******************************************************************
       subroutine fcalc_infdbl(dt)
       include 'piccom.f'
+      include 'errcom.f'
       real dt,rmax
       integer imin,kk1,kk2
       imin=1.
@@ -1069,6 +1074,7 @@ c      write(*,'($)')" "
 c*******************************************************************
       subroutine innerbc(imin,dt)
       include 'piccom.f'
+      include 'errcom.f'
       real flogfac
       real fluxofangle(nthsize,npsisize)
 
@@ -1224,6 +1230,7 @@ c               phi(imin,j,k)=vprobe
 c********************************************************************
       subroutine postcollide(i,tisq)
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 c Get new velocity; reflects neutral maxwellian shifted by vneut and v_ExB.
       xp(4,i)=tisq*gasdev(idum) + vneut(1) + ecbdrift(1)

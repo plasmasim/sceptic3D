@@ -49,6 +49,7 @@ c does the potential calculation
 
 c Common storage
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
       include 'fvcom.f'
       data rmax/5./
@@ -66,7 +67,7 @@ c     Variables used for looping over CG for nonlin Poisson solver
 c     Variables used for calculating matrix A for debugging
       real inputvect(nrsize-1,0:nthsize,0:npsisize),
      $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
-      integer n1,n2,n3,m,n,o
+      integer n1,n2,n3,m,n,o, one
 
 
 c Parallel processing MPI options.
@@ -89,6 +90,8 @@ c      write(*,*)'Starting',myid
 c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
+      saveatstep = 2
+      one = 0
 
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
@@ -737,6 +740,19 @@ c     SCEPTIC2D uses the potential at the current time step.
             write(*,'(i5,$)')i
          endif
 
+c        For debugging: Set flag to save Poisson matrices for small grid
+         lsavemat = .true.
+         stepcount = stepcount+1
+         if (lsavemat .and.
+     $     nr .le. nrsizesave .and.
+     $     nth .le. nthsizesave .and.
+     $     npsi .le. npsisizesave .and.
+     $     i .le. nstepssave) then
+            lsavemat = .true.
+         elseif (i .le. nstepssave) then
+            lsavephi = .false.
+         endif
+
 
 c     Calculate the potential field, unless it is fixed.
          if (myid2.eq.0.and.infdbl) then
@@ -808,9 +824,6 @@ c     in diags, called only by myid=0, not myid2=0
 
 c        For debugging: Save phi for first nstepssave if small grid
          lsavephi = .true.
-c        For debugging, don't do this now since doing in shielding3D
-c          but set lsavephi to true after
-         lsavephi = .false.
          if (lsavephi .and.
      $     nr .le. nrsizesave .and.
      $     nth .le. nthsizesave .and.
@@ -825,56 +838,53 @@ c          but set lsavephi to true after
                   enddo
                enddo
             enddo
-c           If desired step, save matrix A and its transpose
-            if (i .eq. 3) then
-               n1 = rshield
-               n2 = nthused
-               n3 = npsiused
-               do j=1,n3
-                  do k=1,n2
-                     do l=1,n1
-c                       Pass unit vectors to atimes to build A
-                        inputvect(l,k,j) = 1.
-                        call atimes(n1,n2,n3,inputvect,outputvect,
-     $                    .false.)
-                        do m=1,n3
-                           do n=1,n2
-                              do o=1,n1
-                                 Asave(o,n,m,l,k,j)=outputvect(o,n,m)
-c                                atimes may change input vector, so reset
-                                 inputvect(o,n,m) = 0.
-c                                reset output too to be safe
-                                 outputvect(o,n,m) = 0.
-                              enddo
-                           enddo
-                        enddo
-c                       Pass unit vectors to atimes to build A'
-                        inputvect(l,k,j) = 1.
-                        call atimes(n1,n2,n3,inputvect,outputvect,
-     $                    .true.)
-                        do m=1,n3
-                           do n=1,n2
-                              do o=1,n1
-                                 Atsave(o,n,m,l,k,j)=outputvect(o,n,m)
-c                                atimes may change input vector, so reset
-                                 inputvect(o,n,m) = 0.
-c                                reset output too to be safe
-                                 outputvect(o,n,m) = 0.
+         elseif (i .le. nstepssave) then
+            lsavephi = .false.
+         endif
+
+
+         if (myid.eq.0) then
+
+c             For debugging, save matrix A and its transpose,
+c               the vector b, and the result x
+                  if (lsavemat .and. stepcount .eq. saveatstep) then
+                     n1 = rshield
+                     n2 = nthused
+                     n3 = npsiused
+                     if (cgparallel) then
+c                       Density is stored on different grid for parallel
+                        one = 1
+                     else
+                        one = 0
+                     endif
+                     do j=1,n3
+                        do k=1,n2
+                           do l=1,n1
+                              jkl = l + (k-1)*n1 + (j-1)*n2*n1
+                              bsavevect(jkl) = bsave(l,k,j)
+                              xsavevect(jkl) = xsave(l,k,j)
+                              do m=1,n3
+                                 do n=1,n2
+                                    do o=1,n1
+                                       mno = o + (n-1)*n1 + (m-1)*n2*n1;
+c                                       Amat(mno,jkl)
+c     $                                   = Asave(o+one,n+one,m+one,
+c     $                                           l+one,k+one,j+one)
+cc                                      For debugging, don't do this
+                                       Amat(mno,jkl)
+     $                                   = Asave(o,n,m,l,k,j)
+c                                       Atmat(mno,jkl)
+c     $                                   = Atsave(o,n,m,l,k,j)                                    enddo
+                                       Atmat(mno,jkl)
+     $                                   = Atsave(o+one,n+one,m+one,
+     $                                            l+one,k+one,j+one)                                    enddo
+                                    enddo
+                                 enddo
                               enddo
                            enddo
                         enddo
                      enddo
-                  enddo
-               enddo
-            endif
-         elseif (i .le. nstepssave) then
-            lsavephi = .false.
-         endif
-c        For debugging set lsavephi to true after
-         lsavephi = .true.
-
-
-         if (myid.eq.0) then
+                  endif
 
             
 c     Evaluate total charge and z-forces. Not yet implemented for NGP.
@@ -1095,6 +1105,7 @@ c Current time-step
       integer i
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
  501  format(10f8.1)
 
 c Now we have added up fractional charges assigned to each mesh point. 
@@ -1224,6 +1235,7 @@ c*********************************************************************
 #ifdef MPI
 c The particle number total
       include 'piccom.f'
+      include 'errcom.f'
       include 'mpif.h'
       logical first
 
@@ -1362,6 +1374,7 @@ c***********************************************************************
       subroutine partreduce(i)
       integer i
       include 'piccom.f'
+      include 'errcom.f'
 #ifdef MPI
       include 'mpif.h'
       real nvdiagtot(nvmax)
@@ -1453,6 +1466,7 @@ c         write(*,*)'zmomstep=',zmomstep(i),'  zoutstep=',zmoutstep(i)
 c***************************************************************
       subroutine aveupstep()
       include 'piccom.f'
+      include 'errcom.f'
 c Increment the averaging processes only here.
       if(nstepsave.lt.nsamax)nstepsave=nstepsave+1
       do j=1,nvmax
@@ -1468,6 +1482,7 @@ c*****************************************************************
      $     ,zmoutave,xmomave,fexave,xmoutave,ymomave, feyave,ymoutave
      $     ,qprobeave,epzave,epxave,epyave)
       include 'piccom.f'
+      include 'errcom.f'
       
       integer m2
 c     Average the flux to the probe from the few steps (given by m2).

@@ -29,7 +29,9 @@ ifeq ("$(NOWARN)","")
 	NOWARN=
 endif
 
-COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
+#COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
+# For debugging, don't use optimization
+COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -I.
 # For debugging.
 #  -g  -ffortran-bounds-check
 # For profiling
@@ -48,7 +50,7 @@ MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
 
 all : makefile sceptic3D
 
-sceptic3D :  makefile sceptic3D.F  piccom.f  ./accis/libaccisX.a $(OBJECTS)
+sceptic3D :  makefile sceptic3D.F  piccom.f errcom.f  ./accis/libaccisX.a $(OBJECTS)
 	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
 
 # The real Makefile
@@ -64,7 +66,7 @@ makefile : Makefile MFSconfigure
 	@echo Now running make again using the new Makefile
 	make -f $(MAKEFILE)
 
-sceptic3Dmpi : sceptic3D.F  piccom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
+sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
 	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
 
 ./accis/libaccisX.a : ./accis/*.f
@@ -79,17 +81,17 @@ coulflux.o : tools/coulflux.f
 fvinjecttest : fvinjecttest.F makefile fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
 	$(G77)  -o fvinjecttest $(COMPILE-SWITCHES) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIBRARIES)
 
-fvinject.o : fvinject.f fvcom.f piccom.f
+fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
 
-outputhdf.o : outputhdf.f piccom.f colncom.f
+outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f
 	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
 #pattern rule
-%.o : %.f piccom.f fvcom.f makefile;
+%.o : %.f piccom.f errcom.f fvcom.f makefile;
 	$(G77) -c $(COMPILE-SWITCHES) $*.f
 
-%.o : %.F piccom.f makefile;
+%.o : %.F piccom.f errcom.f makefile;
 	$(G77) -c $(COMPILE-SWITCHES) $*.F
 
 % : %.f makefile

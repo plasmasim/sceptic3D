@@ -10,6 +10,7 @@ c Input variables
       integer k, icolntype
 c Common data
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 c Functions
       integer nbcat
@@ -1266,6 +1267,22 @@ c     Single value variables
       call writehdfintmat(group_id,dsetname,
      $ lsavephi,storage_dims,data_dims,rank)
 
+      if (stepcount .lt. saveatstep) then
+         lsavemat = .false.
+      endif
+
+      dsetname = 'lsavemat'
+      call writehdfintmat(group_id,dsetname,
+     $ lsavemat,storage_dims,data_dims,rank)
+
+      dsetname = 'stepcount'
+      call writehdfintmat(group_id,dsetname,
+     $ stepcount,storage_dims,data_dims,rank)
+
+      dsetname = 'saveatstep'
+      call writehdfintmat(group_id,dsetname,
+     $ saveatstep,storage_dims,data_dims,rank)
+
 c     Variable arrays
       if (lsavephi) then
 
@@ -1295,7 +1312,10 @@ c     Variable arrays
       call writehdfrealmat(group_id,dsetname,
      $  phiaxissave,storage_dims,data_dims,rank)
 
-      dsetname = 'Asave'
+      endif
+
+      if (lsavemat) then
+
       rank = 6
       data_dims(1) = nr
       data_dims(2) = nth
@@ -1309,77 +1329,54 @@ c     Variable arrays
       storage_dims(4) = nrsizesave
       storage_dims(5) = nthsizesave
       storage_dims(6) = npsisizesave
+
+      dsetname = 'Asave'
       call writehdfrealmat(group_id,dsetname,
      $  Asave,storage_dims,data_dims,rank)
 
       dsetname = 'Atsave'
-      rank = 6
-      data_dims(1) = nr
-      data_dims(2) = nth
-      data_dims(3) = npsi
-      data_dims(4) = nr
-      data_dims(5) = nth
-      data_dims(6) = npsi
-      storage_dims(1) = nrsizesave
-      storage_dims(2) = nthsizesave
-      storage_dims(3) = npsisizesave
-      storage_dims(4) = nrsizesave
-      storage_dims(5) = nthsizesave
-      storage_dims(6) = npsisizesave
       call writehdfrealmat(group_id,dsetname,
      $  Atsave,storage_dims,data_dims,rank)
 
-      dsetname = 'Amat'
       rank = 2
       data_dims(1) = nr*nth*npsi
       data_dims(2) = nr*nth*npsi
       storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
       storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
+
+      dsetname = 'Amat'
       call writehdfrealmat(group_id,dsetname,
      $  Amat,storage_dims,data_dims,rank)
 
       dsetname = 'Atmat'
-      rank = 2
-      data_dims(1) = nr*nth*npsi
-      data_dims(2) = nr*nth*npsi
-      storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
-      storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
       call writehdfrealmat(group_id,dsetname,
      $  Atmat,storage_dims,data_dims,rank)
 
-      dsetname = 'bsave'
       rank = 3
       data_dims(1) = rshieldingsave
-      data_dims(2) = nthused
-      data_dims(3) = npsiused
-      storage_dims(1) = nrsize-1
-      storage_dims(2) = nthsize+1
-      storage_dims(3) = npsisize+1
+      data_dims(2) = nthused+1
+      data_dims(3) = npsiused+1
+      storage_dims(1) = nrsizesave-1
+      storage_dims(2) = nthsizesave+1
+      storage_dims(3) = npsisizesave+1
+
+      dsetname = 'bsave'
       call writehdfrealmat(group_id,dsetname,
      $  bsave,storage_dims,data_dims,rank)
 
       dsetname = 'xsave'
-      rank = 3
-      data_dims(1) = rshieldingsave
-      data_dims(2) = nthused
-      data_dims(3) = npsiused
-      storage_dims(1) = nrsize-1
-      storage_dims(2) = nthsize+1
-      storage_dims(3) = npsisize+1
       call writehdfrealmat(group_id,dsetname,
      $  xsave,storage_dims,data_dims,rank)
 
-      dsetname = 'bsavevect'
       rank = 1
       data_dims(1) = rshieldingsave*nthused*npsiused
-      storage_dims(1) = (nrsize-1)*(nthsize+1)*(npsisize+1)
+      storage_dims(1) = (nrsizesave-1)*(nthsizesave+1)*(npsisizesave+1)
+
+      dsetname = 'bsavevect'
       call writehdfrealmat(group_id,dsetname,
      $  bsavevect,storage_dims,data_dims,rank)
 
       dsetname = 'xsavevect'
-      rank = 1
-      data_dims(1) = rshieldingsave*nthused*npsiused
-      storage_dims(1) = (nrsize-1)*(nthsize+1)*(npsisize+1)
       call writehdfrealmat(group_id,dsetname,
      $  xsavevect,storage_dims,data_dims,rank)
 

@@ -38,6 +38,7 @@ c So that we only have 1 maxinjinit for the 3D case.
       real dt,sd,temp
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 
       vscale=sqrt(Ti)
       vdi=vd/vscale
@@ -165,6 +166,7 @@ c Initialize the distributions describing reinjected particles
       subroutine maxinjinit()
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       real chi
       integer*2 idum
       real gam(nQth)

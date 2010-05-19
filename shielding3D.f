@@ -44,7 +44,9 @@ c     Variables used for calculating matrix A for debugging
       integer n2,n3,j,k,l,m,n,o,jkl,mno
 
 
-      maxits=2*(nrused*nthused*npsiused)**0.333
+c      maxits=2*(nrused*nthused*npsiused)**0.333
+c     For debugging, increase this
+      maxits=2*(nrused*nthused*npsiused)**0.333*10
 
 c Set the potential on axis to what the solver found at the previous timestep
       do i=2,n1
@@ -80,6 +82,15 @@ c            x(1,j,k) = phi(1,j,k)
          enddo
       enddo
 
+c     Multiply each element of b by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+      do k=1,npsiused
+         do j=1,nthused
+            do i=2,n1
+               b(i,j,k) = b(i,j,k)*multpc(i,j)
+            enddo
+         enddo
+      enddo
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
 
@@ -270,9 +281,10 @@ c     Inner bc lies in the rhs of poisson's equation (b)
       enddo
 
 c     Following line used for minimum residual method
-cc        For debugging, make as before
-c      call atimes(n1,n2,n3,res,resr,.false.)
-      
+c     For debugging, give bcg option
+      if (.not. lbcg) then
+         call atimes(n1,n2,n3,res,resr,.false.)
+      endif
 
       call asolve(n1,n2,n3,res,z,error0)
 
@@ -331,9 +343,8 @@ c     Main loop
             enddo
          enddo
          ak=bknum/akden
-         call atimes(n1,n2,n3,pp,zz,.true.)
-cc        For debugging, make symmetric
-c         call atimes(n1,n2,n3,pp,zz,.false.)
+c        For debugging, give bcg option by using lbcg as transpose flag
+         call atimes(n1,n2,n3,pp,zz,lbcg)
          
          deltamax=0.
          do k=1,n3
@@ -384,14 +395,19 @@ c     matrix, returns z=Atilde^-1*b.
       
       do k=1,n3
          do j=1,n2
-c           For debugging, leave i=1 element unchanged
+cc           For debugging, leave i=1 element unchanged
 c            i=1
 c            z(i,j,k) = b(i,j,k)
 
             do i=2,n1-1
                z(i,j,k)=b(i,j,k)/(-fpc(i,j)-exp(phi(i,j,k)))
-c              For debugging ,make preconditioner identiy matrix
+cc              For debugging ,make preconditioner identiy matrix
 c               z(i,j,k)=b(i,j,k)
+
+c              Divide by appropriate factor to make A symmetric
+c                (if lmultpc), for debugging
+               z(i,j,k)=z(i,j,k)/multpc(i,j)
+
                error=error+b(i,j,k)**2
             enddo
          enddo
@@ -424,105 +440,108 @@ c Outputs res=Ax or A'x, where A is the finite volumes stiffness matrix
      $     ,0:nthsize ,0:npsisize)
       integer n1,n2,n3
       logical ltrnsp
-c     For debugging
-      real ri, rip1, rave, apcext, bpcext, dr
-         i=n1
-         ri=  (r(i)+r(i-1))/2.
-         dr=  r(i)-r(i-1)
-         rave=r(i)**2
-         bpcext=debyelen**2 *ri**2/rave/dr/dr
 
 
       if (ltrnsp) then
 
 
 c Bulk iteration for A'
+c     Multiply elements by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+c     Note that the transpose makes it necesary to multiply coeficients
+c       rather than just each element of the result
 
       do k=2,n3-1
          do j=1,n2
             i=1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $        + apc(i-1)*x(i-1,j,k)
-     $        + dpc(i,j+1)*x(i,j+1,k)
-     $        + cpc(i,j-1)*x(i,j-1,k)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-c For debuggin setting diagonal to 0
-c     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
-c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+cc For debuggin setting diagonal to 0
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
 c     $        + x(i,j,k)
             do i=2,n1-2
-               res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $           + apc(i-1)*x(i-1,j,k)
-     $           + dpc(i,j+1)*x(i,j+1,k)
-     $           + cpc(i,j-1)*x(i,j-1,k)
-     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+               res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $           + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $           + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $           + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
             enddo
             i=n1-1
-               res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-     $           + apc(i-1)*x(i-1,j,k)
-     $           + dpc(i,j+1)*x(i,j+1,k)
-     $           + cpc(i,j-1)*x(i,j-1,k)
-     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c               res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+c              For debugging, forget about above fix
+               res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $           + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $           + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $           + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
       enddo
 
       k=1
       do j=1,n2
          i=1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
-c For debugging setting diagonal to 0
-c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
-c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+cc For debugging setting diagonal to 0
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
 c     $        + x(i,j,k)
          do i=2,n1-2
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $        + apc(i-1)*x(i-1,j,k)
-     $        + dpc(i,j+1)*x(i,j+1,k)
-     $        + cpc(i,j-1)*x(i,j-1,k)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
          i=n1-1
-         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+c              For debugging, forget about above fix
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
       enddo
       k=n3
       do j=1,n2
          i=1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
-c For debuggin setting diagonal to 0
-c     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
-c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
+cc For debuggin setting diagonal to 0
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
 c     $        + x(i,j,k)
          do i=2,n1-1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $        + apc(i-1)*x(i-1,j,k)
-     $        + dpc(i,j+1)*x(i,j+1,k)
-     $        + cpc(i,j-1)*x(i,j-1,k)
-     $        + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
          i=n1-1
-         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+c         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+c              For debugging, forget about above fix
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
       enddo
 
 c Outer boundary iteration for A'
@@ -537,12 +556,12 @@ c The solution x one node further the boundary
      $        + 0*gpc(j,k,4)
      $        + gpc(j,k,5)*x(i,j,k)
 
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $        + apc(i-1)*x(i-1,j,k)
-     $        + dpc(i,j+1)*x(i,j+1,k)
-     $        + cpc(i,j-1)*x(i,j-1,k)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
 
          k=1
@@ -552,12 +571,12 @@ c The solution x one node further the boundary
      $     + 0*gpc(j,k,4)
      $     + gpc(j,k,5)*x(i,j,k)
 
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
 
          k=n3
          x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
@@ -566,12 +585,12 @@ c The solution x one node further the boundary
      $     + 0*gpc(j,k,4)
      $     + gpc(j,k,5)*x(i,j,k)
 
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
-     $     + apc(i-1)*x(i-1,j,k)
-     $     + dpc(i,j+1)*x(i,j+1,k)
-     $     + cpc(i,j-1)*x(i,j-1,k)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
 
       enddo
 
@@ -667,9 +686,18 @@ c The solution x one node further the boundary
 
       enddo
 
+c     Multiply each row by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+      do k=1,n3
+         do j=1,n2
+            do i=2,n1
+               res(i,j,k) = res(i,j,k)*multpc(i,j)
+            enddo
+         enddo
+      enddo
+
+
       endif
-
-
 
 
       end

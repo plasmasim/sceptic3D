@@ -243,7 +243,14 @@ c Poisson coefficients for iterative solution, etc.
       real epc(0:nrsize,0:nthsize)
       real fpc(0:nrsize,0:nthsize)
       real gpc(0:nthsize,0:npsisize,1:5)
+c     A multiplier for each entire equation (to ensure symmetry of A)
+      real multpc(0:nrsize,0:nthsize)
+c     Flag indicating to multiply by above factor
+      logical lmultpc
+c     Flag indicating to use biconjugate gradient method (not min. res.)
+      logical lbcg
       common /poisson/debyelen,vprobe,Ezext,apc,bpc,cpc,dpc,fpc,epc,gpc
+     $  ,multpc,lmultpc,lbcg
 c*********************************************************************
 c Smoothing steps
       integer nstepsave,nsamax,diagsamp

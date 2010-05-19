@@ -1317,10 +1317,10 @@ c     Variable arrays
       if (lsavemat) then
 
       rank = 6
-      data_dims(1) = nr
+      data_dims(1) = rshieldingsave
       data_dims(2) = nth
       data_dims(3) = npsi
-      data_dims(4) = nr
+      data_dims(4) = rshieldingsave
       data_dims(5) = nth
       data_dims(6) = npsi
       storage_dims(1) = nrsizesave
@@ -1339,8 +1339,8 @@ c     Variable arrays
      $  Atsave,storage_dims,data_dims,rank)
 
       rank = 2
-      data_dims(1) = nr*nth*npsi
-      data_dims(2) = nr*nth*npsi
+      data_dims(1) = rshieldingsave*nth*npsi
+      data_dims(2) = rshieldingsave*nth*npsi
       storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
       storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
 

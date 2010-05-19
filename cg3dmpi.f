@@ -123,7 +123,7 @@ c     q is the "charge density".
 c
       subroutine cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi,u,q
      $     ,ictl,ierr,mpiid,idim1,idim2,idim3,apc,bpc,cpc,dpc,epc,fpc
-     $     ,gpc,b,x,p,res,z,pp,resr,zz)
+     $     ,gpc,multpc,b,x,p,res,z,pp,resr,zz,lbcg)
 
       integer cg_comm,mpiid
 c     The number of dimensions, 3 here.
@@ -135,7 +135,7 @@ c     ni active dimension of i
 c     In this mpi routine we must use linear addressing for cij,u,q
 c     so that the pointers can be used for each block.
       real apc(*),bpc(*),cpc(*),dpc(*),epc(*),fpc(*)
-      real gpc(0:Lj-1,0:Lk-1,1:5)
+      real gpc(0:Lj-1,0:Lk-1,1:5),multpc(0:Li-1,0:Lj-1)
 c     u  potential to be solved for (initialized on entry).
 c        its boundaries are at 1,ni; 1,nj; 
       real u(*)
@@ -190,6 +190,9 @@ c     Index for array storage
 c     Temporary arrays for the cg solver
       real b(*),x(*),p(*),res(*),z(*),pp(*),resr(*),zz(*)
       
+c     Flag to use biconjugate gradient method (not minimum residual)
+      logical lbcg
+
  
 c-------------------------------------------------------------------
 
@@ -247,8 +250,9 @@ c        Do matrix multiplication
          call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
-     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out,
-     $     .false.)
+     $     ,fpc(myorig1+Li*myorig2)
+     $     ,gpc(myorig2,myorig3,1), multpc(myorig1,myorig2), out,
+     $     lAtranspose)
 c        Do the final mpi_gather
          kc=-1
          call bbdy(cg_comm,iLs,iuds,res,kc,iorig,ndims,idims,lperiod,
@@ -299,12 +303,25 @@ c              Should probably just not do loop for these values
          enddo
       enddo
 
+c     Multiply each element of b by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+      do k=1,myside(3)
+         do j=1,myside(2)
+            do i=1,myside(1)
+c              Note that the definition of index is such that it starts
+c                at 0, so that i=1 actually addresses the 0 element of b
+               index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
+               b(index) = b(index)*multpc(myorig1+i-1,myorig2+j-1)
+            enddo
+         enddo
+      enddo
 
 c Outputs Ax, where A is the cg matrix
       call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
-     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out,
+     $     ,fpc(myorig1+Li*myorig2)
+     $     ,gpc(myorig2,myorig3,1), multpc(myorig1,myorig2), out,
      $     .false.)
 
       
@@ -333,17 +350,23 @@ c For the next atimesmpi, need res also on the shadow cells
 
       
 
-      call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk ,res(myorig)
+c     Following call used for minimum residual method
+c     For debugging, give bcg option
+      if (.not. lbcg) then
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk
+     $     ,res(myorig)
      $     ,resr(myorig),u(myorig),apc(myorig1) ,bpc(myorig1)
      $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li *myorig2)
      $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li*myorig2)
-     $     ,gpc(myorig2,myorig3 ,1),out,
+     $     ,gpc(myorig2,myorig3,1), multpc(myorig1,myorig2), out,
      $     .false.)
+      endif
 
 
       call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
      $     ,res(myorig),z(myorig),u(myorig),apc(myorig1),fpc(myorig1
-     $     +Li*myorig2),gpc(myorig2,myorig3 ,1),out)
+     $     +Li*myorig2),gpc(myorig2,myorig3,1)
+     $     ,multpc(myorig1,myorig2),out)
 
 
 c     Start Main iteration  
@@ -359,7 +382,8 @@ c Do block boundary communications
 
          call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
      $        ,resr(myorig),zz(myorig),u(myorig),apc(myorig1)
-     $        ,fpc(myorig1 +Li*myorig2),gpc(myorig2,myorig3 ,1),out)
+     $        ,fpc(myorig1 +Li*myorig2),gpc(myorig2,myorig3,1)
+     $     ,multpc(myorig1,myorig2),out)
 
          
          
@@ -436,8 +460,9 @@ c     Sum bknum over all the participating nodes
          call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,p(myorig)
      $        ,z(myorig),u(myorig),apc(myorig1),bpc(myorig1),cpc(myorig1
      $        +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li
-     $        *myorig2) ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1
-     $        ) ,out,
+     $        *myorig2)
+     $     ,fpc(myorig1+Li*myorig2)
+     $     ,gpc(myorig2,myorig3,1), multpc(myorig1,myorig2), out,
      $     .false.)
 
          
@@ -462,14 +487,14 @@ c Sum akden over all the participating nodes
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
 
-         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,pp(myorig
-     $        ),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
-     $        ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
-     $        ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
-     $        ,gpc(myorig2,myorig3,1) ,out,
-     $     .false.)
+c        For debugging, give bcg option by using lbcg as transpose flag
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,
+     $     pp(myorig),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
+     $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
+     $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
+     $     ,gpc(myorig2,myorig3,1), multpc(myorig1,myorig2), out,
+     $     lbcg)
 
-         
          deltamax=0.
          
          do k=2,myside(3)-1
@@ -500,7 +525,8 @@ c         endif
 
          call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
      $        ,res(myorig),z(myorig),u(myorig),apc(myorig1) ,fpc(myorig1
-     $        +Li*myorig2),gpc(myorig2,myorig3 ,1),out)
+     $        +Li*myorig2),gpc(myorig2,myorig3,1)
+     $     ,multpc(myorig1,myorig2),out)
 
          
       enddo
@@ -537,8 +563,8 @@ c      mpiid=myid
 
 c***********************************************************************
 c Outputs res=Ax, where A is the finite volumes stiffness matrix
-      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,out,
-     $  ltrnsp)
+      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,
+     $  multpc,out,ltrnsp)
 
       
 c      integer ni,nj,nk
@@ -546,7 +572,8 @@ c      integer Li,Lj,Lk
 
       logical out
       real x(Li,Lj,nk),res(Li,Lj,nk),u(Li,Lj,nk)
-      real a(ni),b(ni),c(Li,nj),d(Li,nj),e(Li,nj),f(Li,nj),g(Lj,Lk,5)
+      real a(ni),b(ni),c(Li,nj),d(Li,nj),e(Li,nj),f(Li,nj),g(Lj,Lk,5),
+     $  multpc(Li,nj)
       logical ltrnsp
 
 
@@ -556,15 +583,19 @@ c The numbering starts at 1 and ends at n, but 1 and n are the ghost cells
 
 
 c Matrix multiplication
+c     Multiply elements by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+c     Note that the transpose makes it necesary to multiply coeficients
+c       rather than just each element of the result
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-2
-               res(i,j,k) = a(i)*x(i+1,j,k)
-     $           + b(i)*x(i-1,j,k)
-     $           + c(i,j)*x(i,j+1,k)
-     $           + d(i,j)*x(i,j-1,k)
-     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $           + c(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)*multpc(i,j)
             enddo
          enddo
       enddo
@@ -581,23 +612,23 @@ c Take care of outer boundary condition
      $           + 0*g(j,k,4)
      $           + g(j,k,5)*x(i,j,k)
 
-               res(i,j,k) = a(i)*x(i+1,j,k)
-     $           + b(i)*x(i-1,j,k)
-     $           + c(i,j)*x(i,j+1,k)
-     $           + d(i,j)*x(i,j-1,k)
-     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $           + c(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)*multpc(i,j)
             enddo
          enddo
       else
          do k=2,nk-1
             do j=2,nj-1
-               res(i,j,k) = a(i)*x(i+1,j,k)
-     $           + b(i)*x(i-1,j,k)
-     $           + c(i,j)*x(i,j+1,k)
-     $           + d(i,j)*x(i,j-1,k)
-     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
-     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $           + c(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)*multpc(i,j)
             enddo
          enddo
       endif
@@ -653,6 +684,17 @@ c Take care of outer boundary condition
          enddo
       endif
       
+c     Multiply each row by the appropriate factor to make A symmetric
+c       (if lmultpc set), for debugging
+      do k=2,nk-1
+         do j=2,nj-1
+            do i=2,ni-1
+               res(i,j,k) = res(i,j,k)*multpc(i,j)
+            enddo
+         enddo
+      enddo
+
+
       endif
 
       
@@ -661,14 +703,14 @@ c Take care of outer boundary condition
 c***********************************************************************
 c     Preconditioning subroutine. If Atilde is the preconditioning
 c     matrix, returns z=Atilde^-1*b
-      subroutine asolvempi(ni,nj,nk,Li,Lj,Lk,b,z,u,a,f,g,out)
+      subroutine asolvempi(ni,nj,nk,Li,Lj,Lk,b,z,u,a,f,g,multpc,out)
 
       
 c      integer ni,nj,nk
 c      integer Li,Lj,Lk
       logical out
       real b(Li,Lj,nk),z(Li,Lj,nk),u(Li,Lj,nk)
-      real a(ni),f(Li,nj),g(Lj,Lk,5)
+      real a(ni),f(Li,nj),g(Lj,Lk,5),multpc(Li,nj)
 
 c Matrix multiplication
       
@@ -676,7 +718,7 @@ c Matrix multiplication
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-1
-               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))               
+               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))
             enddo
          enddo
       enddo
@@ -697,6 +739,16 @@ c Outer boundary
          enddo
       endif
          
+c     Divide by appropriate factor to make A symmetric
+c       (if lmultpc), for debugging
+      do k=2,nk-1
+         do j=2,nj-1
+            do i=2,ni-1
+               z(i,j,k)=z(i,j,k)/multpc(i,j)
+            enddo
+         enddo
+      enddo
+
       end
 
 
@@ -796,10 +848,10 @@ c        For debugging, intitialize b and x
 
       call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
      $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)
-     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)
+     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1),multpc(0,0)
      $     ,b(1,0,0),x(1,0,0)
      $     ,p(1,0,0) ,res(1,0,0),z(1,0,0) ,pp(1,0,0),resr(1,0,0) ,zz(1,0
-     $     ,0))
+     $     ,0),lbcg)
 
       
       
@@ -850,12 +902,16 @@ c        First, initialize bsave and xsave just in case
 c                 Pass unit vectors to atimes to build A
                   inputvect(l,k,j) = 1.
                   lAtranspose = .false.
+c                 Note that all the arrays passed in the x(*) form
+c                   are offset by one element so that when they are
+c                   passed from within that routine as x(0) it is the
+c                   actual beginning of the array that is passed.
                   call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
      $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
-     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0),inputvect(1,0,0)
-     $              ,p(1,0,0),outputvect(1,0,0),z(1,0,0),pp(1,0,0)
-     $              ,resr(1,0,0),zz(1,0,0))
+     $              ,fpc(1,0),gpc(0,0,1),multpc(0,0),b(1,0,0)
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
                   do m=1,n3
                      do n=1,n2
                         do o=1,n1
@@ -873,9 +929,9 @@ c                 Pass unit vectors to atimes to build A'
                   call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
      $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
-     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0),inputvect(1,0,0)
-     $              ,p(1,0,0),outputvect(1,0,0),z(1,0,0),pp(1,0,0)
-     $              ,resr(1,0,0),zz(1,0,0))
+     $              ,fpc(1,0),gpc(0,0,1),multpc(0,0),b(1,0,0)
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
                   do m=1,n3
                      do n=1,n2
                         do o=1,n1

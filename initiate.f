@@ -472,6 +472,12 @@ c
          bpc(i)=debyelen**2 *ri**2/rave/(rcc(i)-rcc(i-1))
      $        /(rip1-ri)
 
+c        For debugging, check for negative elements
+         if (apc(i).lt.0 .or. bpc(i).lt.0) then
+            write (*,*)'apc or bpc negative: ',apc(i),bpc(i),i
+         endif
+
+
          do j=1,NTHUSED
             cpc(i,j)=debyelen**2/rave
      $           *(0.5*(nth-1)*sin(acos((th(j+1)+th(j))/2.)))**2
@@ -498,6 +504,18 @@ c
             endif
 
             fpc(i,j)=apc(i)+bpc(i)+cpc(i,j)+dpc(i,j)+2*epc(i,j)
+
+c           Set factor to multiply each equation by to ensure symmetry of A
+            if (lmultpc) then
+               multpc(i,j)=rave
+               if(j.eq.1)then
+                  multpc(i,j)=rave/2.
+               elseif(j.eq.NTHUSED)then
+                  multpc(i,j)=rave/2.
+               endif
+            else
+               multpc(i,j)=1.
+            endif
 
          enddo
       enddo

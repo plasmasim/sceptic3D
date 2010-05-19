@@ -90,7 +90,10 @@ c      write(*,*)'Starting',myid
 c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
-      saveatstep = 2
+      saveatstep = 1
+c     Symmetrize A by default and use minimum residual
+      lmultpc=.true.
+      lbcg=.false.
 
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
@@ -235,6 +238,12 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
+c        For debugging, give option not to symmetrize A and/or to use bcg
+         if(string(1:5) .eq. '--nsA') then
+            lmultpc=.false.
+         elseif(string(1:5) .eq. '--bcg') then
+            lbcg=.true.
+         endif
          if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif
@@ -488,21 +497,22 @@ c Initialize the mesh and poisson coefficients
       call poisinitcic()
 
 
-      if(nr.eq.10)then            
-         write(*,*)'apc'
-         write(*,521)apc
-         write(*,*)'bpc'
-         write(*,521)bpc
-         write(*,*)'cpc'
-         write(*,521)cpc
-         write(*,*)'dpc'
-         write(*,521)epc
-         write(*,*)'epc'
-         write(*,521)dpc
-         write(*,*)'fpc'
-         write(*,521)((fpc(i,j),i=1,10),j=0,NTHFULL)
- 521     format(10g8.2)
-      endif
+c     For debugging, don't do this since clutters output
+c      if(nr.eq.10)then
+c         write(*,*)'apc'
+c         write(*,521)apc
+c         write(*,*)'bpc'
+c         write(*,521)bpc
+c         write(*,*)'cpc'
+c         write(*,521)cpc
+c         write(*,*)'dpc'
+c         write(*,521)epc
+c         write(*,*)'epc'
+c         write(*,521)dpc
+c         write(*,*)'fpc'
+c         write(*,521)((fpc(i,j),i=1,10),j=0,NTHFULL)
+c 521     format(10g8.2)
+c      endif
 
 c Initialize the fields. (Changed the order of finit and injinit)
       call finit()
@@ -547,16 +557,17 @@ c Collect the partial sums of moments of distribution.
 c Don't forget to put back samp to false.
       samp=.false.
 
-c Print out diagnostics for tiny meshes.
-      if(nr.eq.10) then
-         write(*,*)'rho,phi,psum'
-         write(*,504)(((rho(iw,jw,kw),iw=1,nr),jw=1,NTHUSED),
-     $        kw=1,NPSIUSED)
-         write(*,504)(((phi(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
-     $        kw=1,NPSIFULL)
-         write(*,503)(((psum(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
-     $        kw=1,NPSIFULL)
-      endif
+c For debugging, don't do this since clutters output
+cc Print out diagnostics for tiny meshes.
+c      if(nr.eq.10) then
+c         write(*,*)'rho,phi,psum'
+c         write(*,504)(((rho(iw,jw,kw),iw=1,nr),jw=1,NTHUSED),
+c     $        kw=1,NPSIUSED)
+c         write(*,504)(((phi(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
+c     $        kw=1,NPSIFULL)
+c         write(*,503)(((psum(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
+c     $        kw=1,NPSIFULL)
+c      endif
       if(lplot)then
          if(ldist) then
             call multiframe(2,3,3)
@@ -761,7 +772,9 @@ c     Calculate the potential field, unless it is fixed.
          else
             totiter=0
             maxdphi=1.
-            dconverge=1.e-5
+c            dconverge=1.e-5
+c           For debugging, change convergence crit.
+            dconverge=1.e-11
             call shielding_bc(dt,rshield,icolntype,colnwt)
             if(.not.cgparallel.and.myid2.eq.0) then
                if(nonlin) then
@@ -847,7 +860,7 @@ c        For debugging: Save phi for first nstepssave if small grid
 c             For debugging, save matrix A and its transpose,
 c               the vector b, and the result x
                   if (lsavemat .and. stepcount .eq. saveatstep) then
-                     n1 = rshield
+                     n1 = rshieldingsave
                      n2 = nthused
                      n3 = npsiused
                      do j=1,n3
@@ -926,14 +939,15 @@ c     standard step size.
             ymom(i,partz,2)=ymom(i,partz,2)/dt
             enertot(i)=enertot(i)/dt
 
-c Small mesh written diagnostics.   
-            if(nr.eq.10) then
-               write(*,*)'rho,phi,psum'
-               write(*,504)(((rho(iw,jw,kw),iw=1,nr),jw=1,NTHUSED),
-     $              kw=1,NPSIUSED)
-               write(*,504)(((phi(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
-     $              kw=1,NPSIFULL)
-            endif
+c For debugging, don't do this since clutters output
+cc Small mesh written diagnostics.
+c            if(nr.eq.10) then
+c               write(*,*)'rho,phi,psum'
+c               write(*,504)(((rho(iw,jw,kw),iw=1,nr),jw=1,NTHUSED),
+c     $              kw=1,NPSIUSED)
+c               write(*,504)(((phi(iw,jw,kw),iw=1,nr),jw=0,NTHFULL),
+c     $              kw=1,NPSIFULL)
+c            endif
          endif
 
          time=time+dt

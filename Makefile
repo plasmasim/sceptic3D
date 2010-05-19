@@ -21,6 +21,8 @@ endif
 LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show (usr/local/hdf5/bin/h5fc)
+HDFDIR = ./hdf5-1.8.4
+HDFBIN = ./hdfbin
 HDFINCLUDE = -I/usr/local/hdf5/include
 HDFLIBRARIES = -L/usr/local/hdf5/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,/usr/local/hdf5/lib
 
@@ -125,3 +127,6 @@ cleanall :
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
+hdf :
+	cd $(HDFDIR) && export HDFDIRFULL=`pwd`
+	cd $(HDFDIR) &&	./configure --prefix=$(HDFDIRFULL) --enable-fortran && make && make install

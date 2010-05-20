@@ -18,9 +18,7 @@ ifeq ("$(ACCISLIB)","")
 	ACCISLIB=./accis
 endif
 
-#LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
-# X library compatability issue on on loki, so don't use
-LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX 
+LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
 # Current directory
 TOPDIR = $(shell pwd)
 # Location of hdf5

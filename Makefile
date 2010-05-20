@@ -131,7 +131,8 @@ ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
 # HDF is a pretty comprehensive build, and shouldn't be changed, so only build once
-hdf : $(HDFDIR)
+hdf :
+	echo "HDF has been built." > hdf
 	cd $(HDFDIR) &&	\
 	./configure --prefix=`pwd` --enable-fortran \
 	FC=`$(G90) -compile-info | awk '{ print $$1}'` && \

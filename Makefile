@@ -18,7 +18,9 @@ ifeq ("$(ACCISLIB)","")
 	ACCISLIB=./accis
 endif
 
-LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+#LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+# X library compatability issue on on loki, so don't use
+LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX 
 # Current directory
 TOPDIR = $(shell pwd)
 # Location of hdf5
@@ -131,8 +133,9 @@ ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
 # HDF is a pretty comprehensive build, and shouldn't be changed, so only build once
+# Remove file 'hdf' to force rebuild (though clean checkout better if changing compiler)
 hdf :
-	echo "HDF has been built." > hdf
+	echo "HDF has been built. Remove this file to rebuild." > hdf
 	cd $(HDFDIR) &&	\
 	./configure --prefix=`pwd` --enable-fortran \
 	FC=`$(G90) -show | awk '{ print $$1}'` && \

@@ -19,12 +19,15 @@ ifeq ("$(ACCISLIB)","")
 endif
 
 LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+# Current directory
+TOPDIR = $(shell pwd)
+# Location of hdf5
+HDFDIR = $(TOPDIR)/hdf5-1.8.4
 # To figure out what to use for the hdf includes and libraries
-# run the h5fc script with -show (usr/local/hdf5/bin/h5fc)
-HDFDIR = ./hdf5-1.8.4
-HDFBIN = ./hdfbin
-HDFINCLUDE = -I/usr/local/hdf5/include
-HDFLIBRARIES = -L/usr/local/hdf5/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,/usr/local/hdf5/lib
+# run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
+HDFINCLUDE = -I$(HDFDIR)/include
+HDFLIBRARIES = -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl \
+	-lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(HDFDIR)/lib
 
 #Default No Warnings
 ifeq ("$(NOWARN)","")
@@ -127,6 +130,10 @@ cleanall :
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
-hdf :
-	cd $(HDFDIR) && export HDFDIRFULL=`pwd`
-	cd $(HDFDIR) &&	./configure --prefix=$(HDFDIRFULL) --enable-fortran && make && make install
+# HDF is a pretty comprehensive build, and shouldn't be changed, so only build once
+hdf : $(HDFDIR)
+	cd $(HDFDIR) &&	\
+	./configure --prefix=`pwd` --enable-fortran \
+	FC=`$(G90) -compile-info | awk '{ print $$1}'` && \
+	make -j8 && \
+	make install

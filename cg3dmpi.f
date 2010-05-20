@@ -289,16 +289,16 @@ c     Formally set the potential at the probe edge to zero, since the
 c     inner boundary condition lies in the right hand side of the equation (b)
                   elseif(i.eq.1)then
                      x(index)=0.
-c                    For debugging, set b to zero as well
-                     b(index)=0.
+cc                    For debugging, set b to zero as well
+c                     b(index)=0.
                   endif
                endif
-c              For debugging, set b and x to zero for j=1 and k=1
-c              Should probably just not do loop for these values
-               if(j .eq. 1 .or. k .eq. 1) then
-                  x(index)=0.
-                  b(index)=0.
-               endif
+cc              For debugging, set b and x to zero for j=1 and k=1
+cc              Should probably just not do loop for these values
+c               if(j .eq. 1 .or. k .eq. 1) then
+c                  x(index)=0.
+c                  b(index)=0.
+c               endif
             enddo
          enddo
       enddo
@@ -855,20 +855,6 @@ c        For debugging, intitialize b and x
 
       
       
-c Write x, the temporary potential file, to phi, and find maxchange
-      if(myid2.eq.0) then
-         maxdphi=0.
-         do k=1,npsiused
-            do j=1,nthused
-               do i=2,ni-1
-                  maxdphi=max(maxdphi,abs(phi(i,j,k)-x(i,j,k)))
-                  phi(i,j,k)=x(i,j,k)
-               enddo
-            enddo
-         enddo
-      endif
-
-
 c For debugging, save matrix A and its transpose, as well as b and x
       if (lsavemat .and. stepcount.eq.saveatstep) then
 c        Set flag for cg3dmpi to only multiply by A
@@ -947,6 +933,20 @@ c                          reset output to to be safe
             enddo
          enddo
       endif
+
+c Write x, the temporary potential file, to phi, and find maxchange
+      if(myid2.eq.0) then
+         maxdphi=0.
+         do k=1,npsiused
+            do j=1,nthused
+               do i=2,ni-1
+                  maxdphi=max(maxdphi,abs(phi(i,j,k)-x(i,j,k)))
+                  phi(i,j,k)=x(i,j,k)
+               enddo
+            enddo
+         enddo
+      endif
+
 
       k=icg_k
       

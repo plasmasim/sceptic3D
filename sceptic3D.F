@@ -90,9 +90,9 @@ c      write(*,*)'Starting',myid
 c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
-      saveatstep = 1
-c     Symmetrize A by default and use minimum residual
-      lmultpc=.true.
+      saveatstep = 20
+c     Don't symmetrize A by default and use minimum residual (i.e. Leo's ver.)
+      lmultpc=.false.
       lbcg=.false.
 
 c Full size arrays by default. Can be changed later by switches.
@@ -238,9 +238,9 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
-c        For debugging, give option not to symmetrize A and/or to use bcg
-         if(string(1:5) .eq. '--nsA') then
-            lmultpc=.false.
+c        For debugging, give option to symmetrize A and/or to use bcg
+         if(string(1:4) .eq. '--sA') then
+            lmultpc=.true.
          elseif(string(1:5) .eq. '--bcg') then
             lbcg=.true.
          endif

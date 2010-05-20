@@ -89,7 +89,7 @@ fvinjecttest : fvinjecttest.F makefile fvinject.o reinject.o initiate.o advancin
 fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
 
-outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f
+outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f hdf
 	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
 #pattern rule

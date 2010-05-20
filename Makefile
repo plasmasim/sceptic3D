@@ -135,6 +135,6 @@ hdf :
 	echo "HDF has been built." > hdf
 	cd $(HDFDIR) &&	\
 	./configure --prefix=`pwd` --enable-fortran \
-	FC=`$(G90) -compile-info | awk '{ print $$1}'` && \
+	FC=`$(G90) -show | awk '{ print $$1}'` && \
 	make -j8 && \
 	make install

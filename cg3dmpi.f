@@ -337,6 +337,9 @@ c     first search direction is the first residual
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                res(index)=b(index)-res(index)
                if(inn.and.i.eq.1) res(index)=0.
+c              The following line is required for the bcg method
+c              For debugging, also set resr to zero
+               resr(index)=res(index)
             enddo
          enddo
       enddo
@@ -836,15 +839,15 @@ c     Initialize variables for debugging
       
       ictl=1
   
-c        For debugging, intitialize b and x
-            do k=0,npsisize
-               do j=0,nthsize
-                  do i=0,nrsize
-                     b(i,j,k) = 0.
-                     x(i,j,k) = 0.
-                  enddo
-               enddo
-            enddo
+cc        For debugging, intitialize b and x
+c            do k=0,npsisize
+c               do j=0,nthsize
+c                  do i=0,nrsize
+c                     b(i,j,k) = 0.
+c                     x(i,j,k) = 0.
+c                  enddo
+c               enddo
+c            enddo
 
       call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
      $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)

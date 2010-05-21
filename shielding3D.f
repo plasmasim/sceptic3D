@@ -76,7 +76,7 @@ c already been calculated in innerbc.f
      $           *phi(1,j,k)
             x(i,j,k)=phi(i,j,k)
             x(1,j,k)=0.
-c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit atimes)
+cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit atimes)
 c            b(1,j,k) = phi(1,j,k)
 c            x(1,j,k) = phi(1,j,k)
          enddo
@@ -273,10 +273,13 @@ c     search direction is the first residual
          do j=1,n2
             do i=2,n1
                res(i,j,k)=b(i,j,k)-res(i,j,k)
+c              The following line is required for the bcg method
                resr(i,j,k)=res(i,j,k)
             enddo
 c     Inner bc lies in the rhs of poisson's equation (b)
             res(1,j,k)=0.
+c           For debugging, also set resr to zero
+            resr(1,j,k)=0.
          enddo
       enddo
 
@@ -419,7 +422,7 @@ c                (if lmultpc), for debugging
          do j=1,n2
             z(i,j,k)=b(i,j,k)/(-fpc(i,j)-exp(phi(i,j,k))
      $           +apc(i)*gpc(j,k,5))
-c              For debugging ,make preconditioner identiy matrix
+cc              For debugging ,make preconditioner identiy matrix
 c               z(i,j,k)=b(i,j,k)
             error=error+b(i,j,k)**2
          enddo
@@ -597,7 +600,7 @@ c The solution x one node further the boundary
 
       else
 
-c For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
+cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
 c      i=1
 c      do k=1,n3
 c         do j=1,n2

@@ -40,7 +40,9 @@ c bloc conjugate gradient
       integer kk1,kk2
 
 
-      maxits=2*(nrused*nthused*npsiused)**0.333
+c      maxits=2*(nrused*nthused*npsiused)**0.333
+c     For debugging, increase this
+      maxits=2*(nrused*nthused*npsiused)**0.333*10
 
 c Set the potential on axis to what the solver found at the previous timestep
       do i=2,n1

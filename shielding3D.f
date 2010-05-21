@@ -424,6 +424,11 @@ c                (if lmultpc), for debugging
      $           +apc(i)*gpc(j,k,5))
 cc              For debugging ,make preconditioner identiy matrix
 c               z(i,j,k)=b(i,j,k)
+
+c              Divide by appropriate factor to make A symmetric
+c                (if lmultpc), for debugging
+               z(i,j,k)=z(i,j,k)/multpc(i,j)
+
             error=error+b(i,j,k)**2
          enddo
       enddo
@@ -475,14 +480,15 @@ c     $        + x(i,j,k)
      $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
             enddo
             i=n1-1
-c               res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-c              For debugging, forget about above fix
-               res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $           + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $           + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $           + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+            res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
+     $        * x(i+1,j,k)*multpc(i+1,j)
+cc           For debugging, forget about above fix
+c            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
+     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
       enddo
 
@@ -507,9 +513,10 @@ c     $        + x(i,j,k)
      $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
          i=n1-1
-c         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-c              For debugging, forget about above fix
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
+     $     * x(i+1,j,k)*multpc(i+1,j)
+cc        For debugging, forget about above fix
+c         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
      $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
@@ -537,9 +544,10 @@ c     $        + x(i,j,k)
      $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
          enddo
          i=n1-1
-c         res(i,j,k) = (bpc(i+1)+gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
-c              For debugging, forget about above fix
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
+     $     * x(i+1,j,k)*multpc(i+1,j)
+cc        For debugging, forget about above fix
+c         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
      $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
@@ -693,7 +701,7 @@ c     Multiply each row by the appropriate factor to make A symmetric
 c       (if lmultpc set), for debugging
       do k=1,n3
          do j=1,n2
-            do i=2,n1
+            do i=1,n1
                res(i,j,k) = res(i,j,k)*multpc(i,j)
             enddo
          enddo

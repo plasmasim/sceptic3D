@@ -592,7 +592,7 @@ c     Note that the transpose makes it necesary to multiply coeficients
 c       rather than just each element of the result
       do k=2,nk-1
          do j=2,nj-1
-            do i=2,ni-2
+            do i=2,ni-1
                res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
@@ -603,38 +603,18 @@ c       rather than just each element of the result
          enddo
       enddo
 
-
 c Take care of outer boundary condition
-      i=ni-1
       if(out) then
+         i=ni-2
          do k=2,nk-1
             do j=2,nj-1
-               x(i+1,j,k) = g(j,k,1)*x(i-1,j,k)
-     $           + g(j,k,2)*x(i,j-1,k)
-     $           + g(j,k,3)*x(i,j+1,k)
-     $           + 0*g(j,k,4)
-     $           + g(j,k,5)*x(i,j,k)
-
-               res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $           + c(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)*multpc(i,j)
-            enddo
-         enddo
-      else
-         do k=2,nk-1
-            do j=2,nj-1
-               res(i,j,k) = b(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $           + a(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $           + d(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $           + c(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)*multpc(i,j)
+               res(i,j,k) = res(i,j,k)
+     $           + g(j,k,1)*a(i+1)*x(i+1,j,k)*multpc(i+1,j)
             enddo
          enddo
       endif
+
+
 
 
 

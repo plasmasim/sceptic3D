@@ -605,11 +605,16 @@ c       rather than just each element of the result
 
 c Take care of outer boundary condition
       if(out) then
-         i=ni-2
          do k=2,nk-1
             do j=2,nj-1
+               i=ni-2
                res(i,j,k) = res(i,j,k)
      $           + g(j,k,1)*a(i+1)*x(i+1,j,k)*multpc(i+1,j)
+               i=ni-1
+               res(i,j,k) = res(i,j,k)
+     $           + g(j+1,k,2)*a(i)*x(i,j+1,k)*multpc(i,j+1)
+     $           + g(j-1,k,3)*a(i)*x(i,j-1,k)*multpc(i,j-1)
+     $           + g(j,k,5)*a(i)*x(i,j,k)*multpc(i,j)
             enddo
          enddo
       endif

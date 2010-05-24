@@ -76,9 +76,6 @@ c already been calculated in innerbc.f
      $           *phi(1,j,k)
             x(i,j,k)=phi(i,j,k)
             x(1,j,k)=0.
-cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit atimes)
-c            b(1,j,k) = phi(1,j,k)
-c            x(1,j,k) = phi(1,j,k)
          enddo
       enddo
 
@@ -453,25 +450,18 @@ c Outputs res=Ax or A'x, where A is the finite volumes stiffness matrix
       if (ltrnsp) then
 
 
-c Bulk iteration for A'
+c Elements of A'
 c     Multiply elements by the appropriate factor to make A symmetric
 c       (if lmultpc set), for debugging
 c     Note that the transpose makes it necesary to multiply coeficients
 c       rather than just each element of the result
+c     Also note that implementing the boundary condition in the transpose
+c       matrix is slighly trickier since the affected elements now
+c       are are spread across i=n1 and i=n1-1, and in j
 
       do k=2,n3-1
          do j=1,n2
-            i=1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-cc For debuggin setting diagonal to 0
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
-c     $        + x(i,j,k)
-            do i=2,n1-2
+            do i=1,n1-2
                res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $           + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $           + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
@@ -481,30 +471,28 @@ c     $        + x(i,j,k)
             enddo
             i=n1-1
             res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $        * x(i+1,j,k)*multpc(i+1,j)
-cc           For debugging, forget about above fix
-c            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        *x(i+1,j,k)*multpc(i+1,j)
      $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
      $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
      $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
      $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+            i=n1
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $        + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
+     $        *x(i,j+1,k)*multpc(i,j+1)
+     $        + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
+     $        *x(i,j-1,k)*multpc(i,j-1)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+     $        - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $        *x(i,j,k)*multpc(i,j)
          enddo
       enddo
 
       k=1
       do j=1,n2
-         i=1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
-cc For debugging setting diagonal to 0
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
-c     $        + x(i,j,k)
-         do i=2,n1-2
+         do i=1,n1
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
@@ -514,28 +502,26 @@ c     $        + x(i,j,k)
          enddo
          i=n1-1
          res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $     * x(i+1,j,k)*multpc(i+1,j)
-cc        For debugging, forget about above fix
-c         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     *x(i+1,j,k)*multpc(i+1,j)
      $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
      $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
      $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
      $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+         i=n1
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
+     $     *x(i,j+1,k)*multpc(i,j+1)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
+     $     *x(i,j-1,k)*multpc(i,j-1)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+     $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $     *x(i,j,k)*multpc(i,j)
       enddo
       k=n3
       do j=1,n2
-         i=1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
-cc For debuggin setting diagonal to 0
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
-c     $        + x(i,j,k)
-         do i=2,n1-1
+         do i=1,n1
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
@@ -545,76 +531,27 @@ c     $        + x(i,j,k)
          enddo
          i=n1-1
          res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $     * x(i+1,j,k)*multpc(i+1,j)
-cc        For debugging, forget about above fix
-c         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
+     $     *x(i+1,j,k)*multpc(i+1,j)
      $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
      $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
      $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
      $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
      $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-      enddo
-
-c Outer boundary iteration for A'
-
-      i=n1
-      do j=1,n2
-         do k=2,n3-1
-c The solution x one node further the boundary
-            x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
-     $        + gpc(j,k,2)*x(i,j-1,k)
-     $        + gpc(j,k,3)*x(i,j+1,k)
-     $        + 0*gpc(j,k,4)
-     $        + gpc(j,k,5)*x(i,j,k)
-
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-         enddo
-
-         k=1
-         x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
-     $     + gpc(j,k,2)*x(i,j-1,k)
-     $     + gpc(j,k,3)*x(i,j+1,k)
-     $     + 0*gpc(j,k,4)
-     $     + gpc(j,k,5)*x(i,j,k)
-
+         i=n1
          res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
      $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-
-         k=n3
-         x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
-     $     + gpc(j,k,2)*x(i,j-1,k)
-     $     + gpc(j,k,3)*x(i,j+1,k)
-     $     + 0*gpc(j,k,4)
-     $     + gpc(j,k,5)*x(i,j,k)
-
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
+     $     *x(i,j+1,k)*multpc(i,j+1)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
+     $     *x(i,j-1,k)*multpc(i,j-1)
      $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
-
+     $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $     *x(i,j,k)*multpc(i,j)
       enddo
+
 
 
       else
-
-cc For debugging, try adding (Ax)(1)=phi(1) as additional eq. (also edit advancing routine)
-c      i=1
-c      do k=1,n3
-c         do j=1,n2
-c            res(i,j,k)=x(i,j,k)
-c         enddo
-c      enddo
 
 c Bulk iteration for A
       

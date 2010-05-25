@@ -876,7 +876,7 @@ c               the vector b, and the result x
                                        Amat(mno,jkl)
      $                                   = Asave(o,n,m,l,k,j)
                                        Atmat(mno,jkl)
-     $                                   = Atsave(o,n,m,l,k,j)                                    enddo
+     $                                   = Atsave(o,n,m,l,k,j)
                                     enddo
                                  enddo
                               enddo

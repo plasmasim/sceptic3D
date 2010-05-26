@@ -1,7 +1,10 @@
-
 # Universal Makefile for sceptic3D
 
+# Set shell to bash (default is sh)
+SHELL = /bin/bash
+
 #Defaults compiler (mpif77 compiler)
+# Could probably be using ?= shorthand 
 ifeq ("$(G77)","")
 	G77=mpif77
 endif
@@ -20,8 +23,11 @@ endif
 
 LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
 # Current directory
+# Should probably just use CURDIR, which is automatically set to
+# the dir from which make is called
 TOPDIR = $(shell pwd)
 # Location of hdf5
+# May be able to use $(realpath hdf5-1.8.4) in stead
 HDFDIR = $(TOPDIR)/hdf5-1.8.4
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
@@ -70,6 +76,9 @@ makefile : Makefile MFSconfigure
 	./MFSconfigure
 	@echo Now running make again using the new Makefile
 	make -f $(MAKEFILE)
+# Should be using $(MAKE) in stead of make here...
+# It may be that using G77 := $(shell ./myscript) constructs are a better
+# way of doing this than using MFSconfigure
 
 sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
 	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)

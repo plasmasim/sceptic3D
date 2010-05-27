@@ -1,39 +1,26 @@
 # Universal Makefile for sceptic3D
 
 # Set shell to bash (default is sh)
-SHELL = /bin/bash
+SHELL := /bin/bash
 
-#Defaults compiler (mpif77 compiler)
-# Could probably be using ?= shorthand 
-ifeq ("$(G77)","")
-	G77=mpif77
-endif
-#Defaults compiler (mpif90 compiler)
-ifeq ("$(G90)","")
-	G90=mpif90
-endif
-#Default Xlib (32 bit)
-ifeq ("$(XLIB)","")
-	XLIB=/usr/X11R6/lib
-endif
-#Default Accis lib
-ifeq ("$(ACCISLIB)","")
-	ACCISLIB=./accis
-endif
+# Set compilers
+G77 := $(shell ./setcomp f77)
+G90 := $(shell ./setcomp f90)
 
-LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
-# Current directory
-# Should probably just use CURDIR, which is automatically set to
-# the dir from which make is called
-TOPDIR = $(shell pwd)
+# Set Xlib location
+XLIB := $(shell ./setxlib)
+
+# Accis lib location
+ACCISLIB ?= ./accis
+
+LIBRARIES :=  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+
 # Location of hdf5
-# May be able to use $(realpath hdf5-1.8.4) in stead
-HDFDIR = $(TOPDIR)/hdf5-1.8.4
+HDFDIR := $(realpath hdf5-1.8.4)
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
-HDFINCLUDE = -I$(HDFDIR)/include
-HDFLIBRARIES = -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl \
-	-lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(HDFDIR)/lib
+HDFINCLUDE := -I$(HDFDIR)/include
+HDFLIBRARIES := -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5
 
 #Default No Warnings
 ifeq ("$(NOWARN)","")
@@ -59,40 +46,24 @@ rhoinfcalc.o shielding3D.o utils.o
 
 MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
 
-all : makefile sceptic3D
+all : sceptic3D
 
-sceptic3D :  makefile sceptic3D.F  piccom.f errcom.f  ./accis/libaccisX.a $(OBJECTS)
+sceptic3D :  sceptic3D.F  piccom.f errcom.f  ./accis/libaccisX.a $(OBJECTS)
 	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
 
-# The real Makefile
-MAKEFILE=makefile
-
-makefile : Makefile MFSconfigure
-	@echo Configuring the Makefile for this platform.
-	rm -f ./accis/makefile
-	rm -f *.o
-	rm -f *./accis/*.o
-	make -C accis
-	./MFSconfigure
-	@echo Now running make again using the new Makefile
-	make -f $(MAKEFILE)
-# Should be using $(MAKE) in stead of make here...
-# It may be that using G77 := $(shell ./myscript) constructs are a better
-# way of doing this than using MFSconfigure
-
-sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
+sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS)
 	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
 
 ./accis/libaccisX.a : ./accis/*.f
 	make -C accis
 
-orbitint : orbitint.f coulflux.o $(OBJECTS) ./accis/libaccisX.a makefile
+orbitint : orbitint.f coulflux.o $(OBJECTS) ./accis/libaccisX.a
 	$(G77) $(COMPILE-SWITCHES) -o orbitint orbitint.f $(OBJECTS) coulflux.o $(LIBRARIES)
 
 coulflux.o : tools/coulflux.f
 	$(G77) -c $(COMPILE-SWITCHES) tools/coulflux.f
 
-fvinjecttest : fvinjecttest.F makefile fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
+fvinjecttest : fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
 	$(G77)  -o fvinjecttest $(COMPILE-SWITCHES) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIBRARIES)
 
 fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
@@ -102,16 +73,16 @@ outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f hdf
 	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
 #pattern rule
-%.o : %.f piccom.f errcom.f fvcom.f makefile;
+%.o : %.f piccom.f errcom.f fvcom.f;
 	$(G77) -c $(COMPILE-SWITCHES) $*.f
 
-%.o : %.F piccom.f errcom.f makefile;
+%.o : %.F piccom.f errcom.f;
 	$(G77) -c $(COMPILE-SWITCHES) $*.F
 
-% : %.f makefile
+% : %.f
 	$(G77)  -o $* $(COMPILE-SWITCHES) $*.f  $(LIBRARIES)
 
-% : %.F makefile
+% : %.F
 	$(G77)  -o $* $(COMPILE-SWITCHES) $*.F  $(LIBRARIES)
 
 sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
@@ -129,7 +100,6 @@ clean :
 	rm -f *.html
 	rm -f Orbits.txt
 	rm -f *~
-	rm -f makefile
 
 cleanall :
 	make clean

@@ -1,6 +1,10 @@
 #!/bin/bash
 # Configure script for SCEPTIC.
 
+# Not using this any more
+echo "Makefile has been altered to no longer require configure."
+echo "Edit the use... scripts in stead."
+exit
 
 UNUSEDLAB=-Wno-unused-labels
 

@@ -1,0 +1,40 @@
+#!/bin/bash
+# Script to choose (return) compiler version for specified language (f77, f90, etc.)
+
+case $1 in
+     f77)
+
+if [ "`which mpif77`" ] ; then
+   # By default use mpif77
+   COMPILER=mpif77
+elif [ "`which gfortran`" ] ; then
+   # Else use gfortran
+   COMPILER=gfortran
+elif [ "`which g77`" ] ; then
+   # Else use g77
+   COMPILER=g77
+else
+   # Or whatever was specified
+   COMPILER=$G77
+fi
+
+     ;;
+     f90)
+
+if [ "`which mpif90`" ] ; then
+   # By default use mpif90
+   COMPILER=mpif90
+elif [ "`which gfortran`" ] ; then
+   # Else use gfortran
+   COMPILER=gfortran
+else
+   # Or whatever was specified
+   COMPILER=$G90
+fi
+
+     ;;
+esac  
+
+
+# Return compiler choice
+echo $COMPILER

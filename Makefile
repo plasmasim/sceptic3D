@@ -94,6 +94,9 @@ sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	tar chzf sceptic3D.tar.gz -C .. sceptic3D
 	./copyremove.sh
 
+
+.PHONY: all clean ftnchek
+
 clean :
 	rm -f *.o
 	rm -f *.ps
@@ -110,12 +113,9 @@ cleanall :
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
-# HDF is a pretty comprehensive build, and shouldn't be changed, so only build once
-# Remove file 'hdf' to force rebuild (though clean checkout better if changing compiler)
-hdf :
-	echo "HDF has been built. Remove this file to rebuild." > hdf
+$(HDFDIR)/lib/libhdf5.a :
 	cd $(HDFDIR) &&	\
-	./configure --prefix=$(HDFDIR) --enable-fortran \
+	./configure --prefix=$(PWD) --enable-fortran \
 	FC=$(G90nonmpi) && \
 	make -j8 && \
 	make install

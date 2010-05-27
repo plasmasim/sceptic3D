@@ -6,6 +6,7 @@ SHELL := /bin/bash
 # Set compilers
 G77 := $(shell ./setcomp f77)
 G90 := $(shell ./setcomp f90)
+G90nonmpi := $(shell ./setcomp f90 nonmpi)
 
 # Set Xlib location
 XLIB := $(shell ./setxlib)
@@ -114,7 +115,7 @@ ftnchek :
 hdf :
 	echo "HDF has been built. Remove this file to rebuild." > hdf
 	cd $(HDFDIR) &&	\
-	./configure --prefix=`pwd` --enable-fortran \
-	FC=`$(G90) -show | awk '{ print $$1}'` && \
+	./configure --prefix=$(HDFDIR) --enable-fortran \
+	FC=$(G90nonmpi) && \
 	make -j8 && \
 	make install

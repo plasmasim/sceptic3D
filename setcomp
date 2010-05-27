@@ -7,6 +7,12 @@ case $1 in
 if [ "`which mpif77`" ] ; then
    # By default use mpif77
    COMPILER=mpif77
+   if [$2 -eq "nonmpi"] ; then
+      # If non-mpi requested, figure out which compiler mpi uses
+      if [ "`mpif77 -show`" } ; then
+         COMPILER=`mpif77 -show | awk '{ print $$1}'`
+      fi
+   fi
 elif [ "`which gfortran`" ] ; then
    # Else use gfortran
    COMPILER=gfortran
@@ -34,6 +40,7 @@ fi
 
      ;;
 esac  
+
 
 
 # Return compiler choice

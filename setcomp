@@ -7,10 +7,10 @@ case $1 in
 if [ "`which mpif77`" ] ; then
    # By default use mpif77
    COMPILER=mpif77
-   if [$2 -eq "nonmpi"] ; then
+   if [[ "$2" == "nonmpi" ]] ; then
       # If non-mpi requested, figure out which compiler mpi uses
-      if [ "`mpif77 -show`" } ; then
-         COMPILER=`mpif77 -show | awk '{ print $$1}'`
+      if [ "`mpif77 -show`" ] ; then
+         COMPILER=`mpif77 -show | awk '{ print $1}'`
       fi
    fi
 elif [ "`which gfortran`" ] ; then
@@ -30,10 +30,10 @@ fi
 if [ "`which mpif90`" ] ; then
    # By default use mpif90
    COMPILER=mpif90
-   if [$2 -eq "nonmpi"] ; then
+   if [[ "$2" == "nonmpi" ]] ; then
       # If non-mpi requested, figure out which compiler mpi uses
-      if [ "`mpif90 -show`" } ; then
-         COMPILER=`mpif90 -show | awk '{ print $$1}'`
+      if [ "`mpif90 -show`" ] ; then
+         COMPILER=`mpif90 -show | awk '{ print $1}'`
       fi
    fi
 elif [ "`which gfortran`" ] ; then

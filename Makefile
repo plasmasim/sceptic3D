@@ -97,21 +97,35 @@ sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	tar chzf sceptic3D.tar.gz -C .. sceptic3D
 	./copyremove.sh
 
-
-.PHONY: all clean ftnchek
+# Indicate that the following targets will never actually exist
+.PHONY: all clean cleandata cleanaccis cleanhdf cleanall ftnchek
 
 clean :
-	rm -f *.o
-	rm -f *.ps
-	rm -f *.orb
-	rm -f *.html
-	rm -f Orbits.txt
-	rm -f *~
+	-rm *.o
+	-rm *.ps
+	-rm *.orb
+	-rm *.html
+	-rm Orbits.txt
+	-rm *~
+
+cleandata :
+	-rm *.dat
+	-rm *.frc
+	-rm *.h5
+
+cleanaccis :
+	make -C accis clean
+	-rm ./accis/libaccisX.a
+
+cleanhdf :
+	make -C $(HDFDIR) clean
+	-rm $(HDFDIR)/lib/libhdf5.a
 
 cleanall :
 	make clean
-	rm -f *.dat
-	rm -f *.frc
+	make cleandata
+	make cleanaccis
+	make cleanhdf
 
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f

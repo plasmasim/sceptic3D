@@ -21,11 +21,14 @@ HDFDIR := $(realpath hdf5-1.8.4)
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
 HDFINCLUDE := -I$(HDFDIR)/include
-HDFLIBRARIES := -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5
+# It appears that the last few options are actually needed to avoid missing
+#   library error when running compiled program
+HDFLIBRARIES = -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl \
+    -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(HDFDIR)/lib
 
 #Default No Warnings
 ifeq ("$(NOWARN)","")
-	NOWARN=
+    NOWARN=
 endif
 
 COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
@@ -70,7 +73,7 @@ fvinjecttest : fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o charg
 fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
 
-outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f hdf
+outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f $(HDFDIR)/lib/libhdf5.a
 	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
 #pattern rule
@@ -115,7 +118,7 @@ ftnchek :
 
 $(HDFDIR)/lib/libhdf5.a :
 	cd $(HDFDIR) &&	\
-	./configure --prefix=$(PWD) --enable-fortran \
+	./configure --prefix=$(HDFDIR) --enable-fortran \
 	FC=$(G90nonmpi) && \
 	make -j8 && \
 	make install

@@ -18,7 +18,9 @@ ACCISLIB ?= ./accis
 LIBRARIES :=  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
 
 # Location of hdf5
-HDFDIR := $(realpath hdf5-1.8.4)
+#HDFDIR := $(realpath hdf5-1.8.4)
+# realpath not available on loki, so use hack
+HDFDIR := $(PWD)/hdf5-1.8.4
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
 HDFINCLUDE := -I$(HDFDIR)/include

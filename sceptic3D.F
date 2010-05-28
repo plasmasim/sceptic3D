@@ -59,7 +59,7 @@ c Common storage
       data writepart/.false./
 
 c     Variables used for looping over CG for nonlin Poisson solver
-      real dconverge,maxdphi
+      real dconverge,dconvergenl,maxdphi
       integer niter,totiter
       logical nonlin
       data nonlin/.false./
@@ -88,9 +88,11 @@ c      write(*,*)'Starting',myid
 
       
 c Variables for debugging
+      lsavemat = .false.
+      lsavephi = .false.
       lfirsttime = .true.
       stepcount = 0
-      saveatstep = 20
+      saveatstep = 10
 c     Don't symmetrize A by default and use minimum residual (i.e. Leo's ver.)
       lmultpc=.false.
       lbcg=.false.
@@ -100,6 +102,9 @@ c Full size arrays by default. Can be changed later by switches.
       nth=nthsize
       if(LCIC) nth=nthsize-1
       npsi=npsisize-1
+c Note: npsi should not be set lower than 4 since this causes indexing
+c   problems in the parallel solver, and nth cannot be lower than 3
+c   (determined during debugging).
 
 c Default MC injection values
       mcrntheta = 5
@@ -243,6 +248,12 @@ c        For debugging, give option to symmetrize A and/or to use bcg
             lmultpc=.true.
          elseif(string(1:5) .eq. '--bcg') then
             lbcg=.true.
+         endif
+c        For debugging, give option to save A and/or phi
+         if(string(1:9) .eq. '--savemat') then
+            lsavemat=.true.
+         elseif(string(1:9) .eq. '--savephi') then
+            lsavephi=.true.
          endif
          if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
@@ -750,8 +761,7 @@ c     SCEPTIC2D uses the potential at the current time step.
             write(*,'(i5,$)')i
          endif
 
-c        For debugging: Set flag to save Poisson matrices for small grid
-         lsavemat = .true.
+c        For debugging: Save Poisson matrices if flag set and small grid
          stepcount = stepcount+1
          if (lsavemat .and.
      $     nr .le. nrsizesave .and.
@@ -760,7 +770,7 @@ c        For debugging: Set flag to save Poisson matrices for small grid
      $     i .le. nstepssave) then
             lsavemat = .true.
          elseif (i .le. nstepssave) then
-            lsavephi = .false.
+            lsavemat = .false.
          endif
 
 
@@ -774,15 +784,21 @@ c     Calculate the potential field, unless it is fixed.
             maxdphi=1.
 c            dconverge=1.e-5
 c           For debugging, change convergence crit.
-            dconverge=1.e-11
+            dconverge=1.e-5
+            dconvergenl = dconverge
             call shielding_bc(dt,rshield,icolntype,colnwt)
             if(.not.cgparallel.and.myid2.eq.0) then
                if(nonlin) then
- 620              if((maxdphi.gt.1.e-5).or.(dconverge.gt.1.1e-5)) then
-                     dconverge=max((maxdphi/nrused/debyelen)**2,1.e-5)
-                     call shielding3D(dt,rshield,dconverge,niter,
+ 620              if((maxdphi.gt.dconverge.or.dconvergenl.gt.dconverge)
+     $              .and. totiter.lt.999) then
+c                    For debugging, limit total number of iterations (above)
+                     dconvergenl =
+     $                 max((maxdphi/nrused/debyelen)**2,dconverge)
+                     call shielding3D(dt,rshield,dconvergenl,niter,
      $                    maxdphi)
                      totiter=totiter+niter
+cc                    For debugging, indicate each loop
+c                     write(*,'(a,$)') "."
                      goto 620
                   endif
                else
@@ -793,10 +809,13 @@ c           For debugging, change convergence crit.
 #ifdef MPI
             elseif(cgparallel.and.myid2.ge.0) then
                if(nonlin) then
- 629              if((maxdphi.gt.1.e-5).or.(dconverge.gt.1.1e-5)) then
-                     dconverge=max((maxdphi/nrused/debyelen)**2,1.e-5)
+ 629              if((maxdphi.gt.dconverge.or.dconvergenl.gt.dconverge)
+     $              .and. totiter.lt.999) then
+c                    For debugging, limit total number of iterations (above)
+                     dconvergenl =
+     $                 max((maxdphi/nrused/debyelen)**2,dconverge)
                      call shielding3D_par(dt,rshield,cg_comm,myid2,
-     $                    dconverge,niter,maxdphi)
+     $                    dconvergenl,niter,maxdphi)
                      totiter=totiter+niter
 c     Broadcast phi and phiaxis for next CG loop
                      call MPI_BCAST(phi,
@@ -806,7 +825,11 @@ c     Broadcast phi and phiaxis for next CG loop
      $                    MPI_REAL,0,cg_comm,ierr)
                      call MPI_BCAST(maxdphi,1,
      $                    MPI_REAL,0,cg_comm,ierr)
+                     call MPI_BCAST(totiter,1,
+     $                    MPI_INTEGER,0,cg_comm,ierr)
                      call MPI_BARRIER(cg_comm,ierr)
+cc                    For debugging, indicate each loop
+c                     if(myid2.eq.0) write(*,'(a,$)') "."
                      goto 629
                   endif
                else
@@ -835,7 +858,6 @@ c     in diags, called only by myid=0, not myid2=0
 #endif
 
 c        For debugging: Save phi for first nstepssave if small grid
-         lsavephi = .true.
          if (lsavephi .and.
      $     nr .le. nrsizesave .and.
      $     nth .le. nthsizesave .and.

@@ -8,7 +8,8 @@ G77 := $(shell ./setcomp f77)
 G90 := $(shell ./setcomp f90)
 G90nonmpi := $(shell ./setcomp f90 nonmpi)
 
-# Set Xlib location
+# Set Xlib location (note that this is not needed
+#   if X11 and Xt are in /usr/lib(64))
 XLIB := $(shell ./setxlib)
 
 # Accis lib location
@@ -21,8 +22,8 @@ HDFDIR := $(realpath hdf5-1.8.4)
 # To figure out what to use for the hdf includes and libraries
 # run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
 HDFINCLUDE := -I$(HDFDIR)/include
-# It appears that the last few options are actually needed to avoid missing
-#   library error when running compiled program
+# The -Wl,-rpath... options are needed since LD_LIBRARY_PATH does
+#   not contain the location of the hdf shared libraries at runtime 
 HDFLIBRARIES = -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl \
     -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(HDFDIR)/lib
 
@@ -31,7 +32,11 @@ ifeq ("$(NOWARN)","")
     NOWARN=
 endif
 
-COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
+# For debugging, tell compiler to pass -stats option to linker
+#   to show time and memory usage
+LINKERSTATS := -Wl,-stats
+
+COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I. $(LINKERSTATS)
 ## For debugging, don't use optimization
 #COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -I.
 # For debugging.
@@ -53,10 +58,10 @@ MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
 all : sceptic3D
 
 sceptic3D :  sceptic3D.F  piccom.f errcom.f  ./accis/libaccisX.a $(OBJECTS)
-	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
+	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES) $(HDFLIBRARIES)
 
 sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS)
-	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) $(HDFLIBRARIES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
+	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES) $(HDFLIBRARIES)
 
 ./accis/libaccisX.a : ./accis/*.f
 	make -C accis

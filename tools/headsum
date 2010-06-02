@@ -1,0 +1,8 @@
+#/bin/sh
+if [ $# -ne 1 ] ; then
+	echo Usage: headsum fileout
+	exit 1
+fi
+if [ -f $1 ] ; then rm $1; fi
+for file in T*.dat; do head -n2 -v $file>>$1; tail -n5 $file>>$1;echo >>$1; done
+

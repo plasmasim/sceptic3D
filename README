@@ -1,0 +1,7 @@
+
+
+Example of command
+
+
+R="mpirun -n 36 ./sceptic3Dmpi  --subcyc --sp  -c15 -l1 -s10 -nr80 -nt40 -np40
+-f -g"; echo $R; $R;

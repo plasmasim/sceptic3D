@@ -137,10 +137,6 @@ c     Single value variables
       call writehdfintmat(group_id,dsetname,
      $ verlet,storage_dims,data_dims,rank)
 
-      dsetname = 'lfulloutput'
-      call writehdfintmat(group_id,dsetname,
-     $ lfulloutput,storage_dims,data_dims,rank)
-
       dsetname = 'LCIC'
       call writehdfintmat(group_id,dsetname,
      $ LCIC,storage_dims,data_dims,rank)

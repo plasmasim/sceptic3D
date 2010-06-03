@@ -46,6 +46,7 @@ c does the potential calculation
       
 c Common storage
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
       include 'fvcom.f'
       data rmax/5./
@@ -71,6 +72,12 @@ c Parallel processing MPI options.
 c      write(*,*)'Starting',myid
 
       
+c Variables for debugging
+      lsavemat = .false.
+      lsavephi = .false.
+      stepcount = 0
+      saveatstep = 1
+
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
       nth=nthsize
@@ -198,6 +205,10 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
+c        For debugging, give option to save phi
+         if(string(1:9) .eq. '--savephi') then
+            lsavephi=.true.
+         endif
          if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif
@@ -641,6 +652,26 @@ c     in diags, called only by myid=0, not myid2=0
       call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 #endif
 
+c        For debugging: Save phi for first nstepssave if small grid
+         if (lsavephi .and.
+     $     nr .le. nrsizesave .and.
+     $     nth .le. nthsizesave .and.
+     $     npsi .le. npsisizesave .and.
+     $     i .le. nstepssave) then
+            do j=0,npsi
+               do k=0,nth
+                  do l=0,nr
+                     phisave(l,k,j,i) = phi(l,k,j)
+                     phiaxissave(l,1,j,i) = phiaxis(l,1,j)
+                     phiaxissave(l,2,j,i) = phiaxis(l,2,j)
+                  enddo
+               enddo
+            enddo
+         elseif (i .le. nstepssave) then
+            lsavephi = .false.
+         endif
+
+
          if (myid.eq.0) then
 
             
@@ -847,6 +878,7 @@ c Current time-step
       integer i
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
  501  format(10f8.1)
 
 c Now we have added up fractional charges assigned to each mesh point. 
@@ -976,6 +1008,7 @@ c*********************************************************************
 #ifdef MPI
 c The particle number total
       include 'piccom.f'
+      include 'errcom.f'
       include 'mpif.h'
       logical first
 
@@ -1114,6 +1147,7 @@ c***********************************************************************
       subroutine partreduce(i)
       integer i
       include 'piccom.f'
+      include 'errcom.f'
 #ifdef MPI
       include 'mpif.h'
       real nvdiagtot(nvmax)
@@ -1205,6 +1239,7 @@ c         write(*,*)'zmomstep=',zmomstep(i),'  zoutstep=',zmoutstep(i)
 c***************************************************************
       subroutine aveupstep()
       include 'piccom.f'
+      include 'errcom.f'
 c Increment the averaging processes only here.
       if(nstepsave.lt.nsamax)nstepsave=nstepsave+1
       do j=1,nvmax
@@ -1220,6 +1255,7 @@ c*****************************************************************
      $     ,zmoutave,xmomave,fexave,xmoutave,ymomave, feyave,ymoutave
      $     ,qprobeave,epzave,epxave,epyave)
       include 'piccom.f'
+      include 'errcom.f'
       
       integer m2
 c     Average the flux to the probe from the few steps (given by m2).

@@ -10,6 +10,7 @@ c Input variables
       integer k, icolntype
 c Common data
       include 'piccom.f'
+      include 'errcom.f'
       include 'colncom.f'
 c Functions
       integer nbcat
@@ -1098,6 +1099,144 @@ c     Single value variables
       dsetname = 'trackinit'
       call writehdfintmat(group_id,dsetname,
      $ trackinit,storage_dims,data_dims,rank)
+
+c Close the group.
+      CALL h5gclose_f(group_id, error)
+
+
+c Create a group in the file.
+      groupname = 'err'
+      CALL h5gcreate_f(file_id, groupname, group_id, error)
+
+c Write the data in this group
+
+c     Single value variables
+      rank = 1
+      data_dims(1) = 1
+      storage_dims(1) = 1
+
+      dsetname = 'lgotooutput'
+      call writehdfintmat(group_id,dsetname,
+     $ lgotooutput,storage_dims,data_dims,rank)
+
+      dsetname = 'lsavephi'
+      call writehdfintmat(group_id,dsetname,
+     $ lsavephi,storage_dims,data_dims,rank)
+
+      if (stepcount .lt. saveatstep) then
+         lsavemat = .false.
+      endif
+
+      dsetname = 'lsavemat'
+      call writehdfintmat(group_id,dsetname,
+     $ lsavemat,storage_dims,data_dims,rank)
+
+      dsetname = 'stepcount'
+      call writehdfintmat(group_id,dsetname,
+     $ stepcount,storage_dims,data_dims,rank)
+
+      dsetname = 'saveatstep'
+      call writehdfintmat(group_id,dsetname,
+     $ saveatstep,storage_dims,data_dims,rank)
+
+c     Variable arrays
+      if (lsavephi) then
+
+      dsetname = 'phisave'
+      rank = 4
+      data_dims(1) = nr+1
+      data_dims(2) = nth+1
+      data_dims(3) = npsi+1
+      data_dims(4) = min(maxsteps,nstepssave)
+      storage_dims(1) = nrsizesave+1
+      storage_dims(2) = nthsizesave+1
+      storage_dims(3) = npsisizesave+1
+      storage_dims(4) = nstepssave
+      call writehdfrealmat(group_id,dsetname,
+     $  phisave,storage_dims,data_dims,rank)
+
+      dsetname = 'phiaxissave'
+      rank = 4
+      data_dims(1) = nr+1
+      data_dims(2) = 2
+      data_dims(3) = npsi+1
+      data_dims(4) = min(maxsteps,nstepssave)
+      storage_dims(1) = nrsizesave+1
+      storage_dims(2) = 2
+      storage_dims(3) = npsisizesave+1
+      storage_dims(4) = nstepssave
+      call writehdfrealmat(group_id,dsetname,
+     $  phiaxissave,storage_dims,data_dims,rank)
+
+      endif
+
+      if (lsavemat) then
+
+      rank = 6
+      data_dims(1) = rshieldingsave
+      data_dims(2) = nth
+      data_dims(3) = npsi
+      data_dims(4) = rshieldingsave
+      data_dims(5) = nth
+      data_dims(6) = npsi
+      storage_dims(1) = nrsizesave
+      storage_dims(2) = nthsizesave
+      storage_dims(3) = npsisizesave
+      storage_dims(4) = nrsizesave
+      storage_dims(5) = nthsizesave
+      storage_dims(6) = npsisizesave
+
+      dsetname = 'Asave'
+      call writehdfrealmat(group_id,dsetname,
+     $  Asave,storage_dims,data_dims,rank)
+
+      dsetname = 'Atsave'
+      call writehdfrealmat(group_id,dsetname,
+     $  Atsave,storage_dims,data_dims,rank)
+
+      rank = 2
+      data_dims(1) = rshieldingsave*nth*npsi
+      data_dims(2) = rshieldingsave*nth*npsi
+      storage_dims(1) = nrsizesave*nthsizesave*npsisizesave
+      storage_dims(2) = nrsizesave*nthsizesave*npsisizesave
+
+      dsetname = 'Amat'
+      call writehdfrealmat(group_id,dsetname,
+     $  Amat,storage_dims,data_dims,rank)
+
+      dsetname = 'Atmat'
+      call writehdfrealmat(group_id,dsetname,
+     $  Atmat,storage_dims,data_dims,rank)
+
+      rank = 3
+      data_dims(1) = rshieldingsave
+      data_dims(2) = nthused+1
+      data_dims(3) = npsiused+1
+      storage_dims(1) = nrsizesave-1
+      storage_dims(2) = nthsizesave+1
+      storage_dims(3) = npsisizesave+1
+
+      dsetname = 'bsave'
+      call writehdfrealmat(group_id,dsetname,
+     $  bsave,storage_dims,data_dims,rank)
+
+      dsetname = 'xsave'
+      call writehdfrealmat(group_id,dsetname,
+     $  xsave,storage_dims,data_dims,rank)
+
+      rank = 1
+      data_dims(1) = rshieldingsave*nthused*npsiused
+      storage_dims(1) = (nrsizesave-1)*(nthsizesave+1)*(npsisizesave+1)
+
+      dsetname = 'bsavevect'
+      call writehdfrealmat(group_id,dsetname,
+     $  bsavevect,storage_dims,data_dims,rank)
+
+      dsetname = 'xsavevect'
+      call writehdfrealmat(group_id,dsetname,
+     $  xsavevect,storage_dims,data_dims,rank)
+
+      endif
 
 c Close the group.
       CALL h5gclose_f(group_id, error)

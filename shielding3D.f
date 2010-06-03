@@ -29,6 +29,7 @@ c******************************************************************
       subroutine shielding3D(dt,n1)
 
       include 'piccom.f'
+      include 'errcom.f'
       real dt,dconverge
       integer maxits
       integer n1
@@ -154,6 +155,7 @@ c     definite positive, we use the minimum residual variant of the
 c     algorithm
 
       include 'piccom.f'
+      include 'errcom.f'
 
       integer itmax,iter
       real eps,delta,deltamax
@@ -289,6 +291,7 @@ c     Preconditioning subroutine. if Atilde is the preconditioning
 c     matrix, returns z=Atilde^-1*b.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       real b(nrsize-1,0:nthsize,0:npsisize), z(nrsize-1,0:nthsize
      $     ,0:npsisize)
@@ -325,6 +328,7 @@ c **************************************
       subroutine atimes(n1,n2,n3,x,res)
 
       include 'piccom.f'
+      include 'errcom.f'
 c Outputs res=Ax, where A is the finite volumes stiffness matrix     
       real x(nrsize-1,0:nthsize,0:npsisize), res(nrsize-1
      $     ,0:nthsize ,0:npsisize)

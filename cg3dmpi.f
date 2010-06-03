@@ -48,6 +48,7 @@ c     processors. With Loki, can't be larger than 512.
 
 
       include 'piccom.f'
+      include 'errcom.f'
       include 'mpif.h'
 
       idim1=nint((numprocs*NRUSED**2/ (NTHUSED*NPSIUSED*1.))**(1./3))
@@ -158,6 +159,7 @@ c     lflag, decide if we call bbdy for the first time or not
 
       
       include 'piccomcg.f'
+      include 'errcom.f'
 
 c The origin of blocks structure may be considered
 c      integer iorig(idim1+1,idim2+1)
@@ -612,6 +614,7 @@ c***********************************************************************
 
 
       include 'piccom.f'
+      include 'errcom.f'
       integer Li,Lj,Lk,ni,nj,nk
       integer myid2
       integer cg_comm

@@ -31,6 +31,7 @@ c___________________________________________________________________________
       integer istep,icolntype
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       include 'fvcom.f'
       real rhoplot(nrsize),rho1theta(nthsize),rhomidtheta(nthsize)
       real rhomidave(nthsize),rho1ave(nthsize)
@@ -159,6 +160,7 @@ c Contouring of the charge density, rho, on distorted mesh., averaged over psi
       integer ir
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 c      save
       character cworka(nrsize*nthsize+13)
       integer ncont
@@ -273,6 +275,7 @@ c Contouring of the charge density at theta=pi/2 (r,psi)
       integer ir
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 c      save
       character cworka(nrsize*nthsize+13)
       integer ncont
@@ -373,6 +376,7 @@ c*******************************************************************
 c Overplot orbits on existing plot.
       subroutine plotorbits
       include 'piccom.f'
+      include 'errcom.f'
       call winset(.true.)
       do k=1,norbits
          call color(7)
@@ -391,6 +395,7 @@ c*********************************************************************
 c Slices, averaged over psi
 
       include 'piccom.f'
+      include 'errcom.f'
       character charin*100,ch2*100
       real rccleft(nrsize),phip1(nrsize)
       real rhoave(0:nrsize,0:nthsize),potave(0:nrsize,0:nthsize)
@@ -497,6 +502,7 @@ c     Angular distribution of density at the probe edge as a function of
 c     theta for various Psi
 
       include 'piccom.f'
+      include 'errcom.f'
       character charin*100,ch2*100
       real rccleft(nrsize),phip1(nrsize)
       real rhoave(0:nthsize,0:npsisize)

@@ -88,7 +88,7 @@ OBJ := initiate.o \
 OBJ += orbitinject.o \
        extint.o \
        maxreinject.o \
-       mcreinject.o \
+       mcreinject.o
 
 # Objects for HDF version of sceptic3D
 OBJHDF := $(OBJ) \

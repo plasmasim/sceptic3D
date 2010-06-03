@@ -1,101 +1,173 @@
 # Universal Makefile for sceptic3D
 
+
 # Set shell to bash (default is sh)
 SHELL := /bin/bash
 
+# Set number of threads to use for HDF make
+NUMPROC := 8
+
 # Set compilers
 G77 := $(shell ./setcomp f77)
+G77nonmpi := $(shell ./setcomp f77 nonmpi)
 G90 := $(shell ./setcomp f90)
 G90nonmpi := $(shell ./setcomp f90 nonmpi)
 
-# Set Xlib location (note that this is not needed
-#   if X11 and Xt are in /usr/lib(64))
-XLIB := $(shell ./setxlib)
-
-# Accis lib location
-ACCISLIB ?= ./accis
-
-LIBRARIES :=  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
-
-# Location of hdf5
+# HDF root directory
 #HDFDIR := $(realpath hdf5-1.8.4)
 # realpath not available on loki, so use hack
-HDFDIR := $(PWD)/hdf5-1.8.4
-# To figure out what to use for the hdf includes and libraries
-# run the h5fc script with -show ($(HDFDIR)/bin/h5fc)
-HDFINCLUDE := -I$(HDFDIR)/include
-# The -Wl,-rpath... options are needed since LD_LIBRARY_PATH does
-#   not contain the location of the hdf shared libraries at runtime 
-HDFLIBRARIES = -L$(HDFDIR)/lib -lhdf5hl_fortran -lhdf5_hl \
-    -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(HDFDIR)/lib
+DIRHDF := $(PWD)/hdf5-1.8.4
 
-#Default No Warnings
-ifeq ("$(NOWARN)","")
-    NOWARN=
-endif
+# Set Xlib location
+DIRXLIB := $(shell ./setxlib)
+# Note that this may not work properly, and is not needed
+#   if X11 and Xt are in /usr/lib(64)
 
-# For debugging, tell compiler to pass -stats option to linker
-#   to show time and memory usage
-LINKERSTATS := -Wl,-stats
-
-COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I. $(LINKERSTATS)
-## For debugging, don't use optimization
-#COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -I.
-# For debugging.
-#  -g  -ffortran-bounds-check
-# For profiling
-#COMPILE-SWITCHES = -Wall -O2 -pg
-
-REINJECT=orbitinject.o extint.o maxreinject.o mcreinject.o
-
-MPICOMPILE-SWITCHES = -DMPI $(COMPILE-SWITCHES)
-
-OBJECTS = initiate.o advancing.o randc.o randf.o diags.o outputs.o outputhdf.o	\
- chargefield.o $(REINJECT) stringsnames.o		\
-rhoinfcalc.o shielding3D.o utils.o
+# Accis lib location unless already set
+DIRACCIS ?= ./accis
 
 
-MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
+# Libraries and options to pass to linker
+LIB := -L$(DIRXLIB) -L$(DIRACCIS) -laccisX -lXt -lX11 
+# Show time and memory usage (debugging)
+LIB += -Wl,-stats
 
-all : sceptic3D
+# Libraries and options to pass to linker for HDF version
+LIBHDF := $(LIB)
+# HDF libraries and options (from h5fc -show in DIRHDF/bin)
+LIBHDF += -L$(DIRHDF)/lib -lhdf5hl_fortran -lhdf5_hl \
+          -lhdf5_fortran -lhdf5 -lz -lm -Wl,-rpath -Wl,$(DIRHDF)/lib
+# Note that the -Wl,-rpath... options are needed since LD_LIBRARY_PATH
+#   does not contain the location of the hdf shared libraries at runtime 
 
-sceptic3D :  sceptic3D.F  piccom.f errcom.f  ./accis/libaccisX.a $(OBJECTS)
-	$(G77) $(COMPILE-SWITCHES) $(HDFINCLUDE) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES) $(HDFLIBRARIES)
 
-sceptic3Dmpi : sceptic3D.F  piccom.f errcom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS)
-	$(G77) $(MPICOMPILE-SWITCHES) $(HDFINCLUDE) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES) $(HDFLIBRARIES)
+# Options to pass to compiler
+OPTCOMP := -I.
+# Show all warnings exept unused variables
+OPTCOMP += -Wall -Wno-unused-variable
+# Enable optimization
+OPTCOMP += -O2
+# Save debugging info
+OPTCOMP += -g
+# Do bounds check (debugging)
+#OPTCOMP += -ffortran-bounds-check
+# Save profiling information (debugging)
+OPTCOMP += -pg
 
+# Options to pass to compiler for HDF version
+OPTCOMPHDF := $(OPTCOMP)
+# Include directory with HDF modules
+OPTCOMPHDF += -I$(DIRHDF)/include
+# Enable HDF by defining 'HDF' for pre-compiler
+OPTCOMPHDF += -DHDF
+
+# Options to pass to compiler for MPI version
+OPTCOMPMPI := $(OPTCOMP)
+# Enable MPI by defining 'MPI' for pre-compiler
+OPTCOMPMPI += -DMPI
+
+# Options to pass to compiler for MPI & HDF version
+OPTCOMPMPIHDF := $(OPTCOMPHDF)
+# Enable MPI by defining 'MPI' for pre-compiler
+OPTCOMPMPIHDF += -DMPI
+
+
+# Objects common to all versions of sceptic3D
+OBJ := initiate.o \
+       advancing.o \
+       randc.o \
+       randf.o \
+       diags.o \
+       outputs.o \
+       chargefield.o \
+       stringsnames.o \
+       rhoinfcalc.o \
+       shielding3D.o \
+       utils.o
+# Reinjection related objects
+OBJ += orbitinject.o \
+       extint.o \
+       maxreinject.o \
+       mcreinject.o \
+
+# Objects for HDF version of sceptic3D
+OBJHDF := $(OBJ) \
+          outputhdf.o
+
+# Objects for MPI version of sceptic3D
+OBJMPI := $(OBJ) \
+          cg3dmpi.o \
+          mpibbdy.o \
+          shielding3D_par.o
+
+# Objects for MPI & HDF version of sceptic3D
+OBJMPIHDF := $(OBJMPI) \
+          outputhdf.o
+
+# Default target is serial sceptic3D without HDF support
+sceptic3D : sceptic3D.F piccom.f errcom.f $(OBJ) ./accis/libaccisX.a
+	$(G77) $(OPTCOMP) -o sceptic3D sceptic3D.F $(OBJ) $(LIB)
+
+# sceptic3D with HDF
+sceptic3Dhdf : sceptic3D.F piccom.f errcom.f $(OBJHDF) ./accis/libaccisX.a
+	$(G77) $(OPTCOMPHDF) -o sceptic3Dhdf sceptic3D.F $(OBJHDF) $(LIBHDF)
+
+# sceptic3D with MPI
+sceptic3Dmpi : sceptic3D.F piccom.f errcom.f piccomcg.f $(OBJMPI) ./accis/libaccisX.a
+	$(G77) $(OPTCOMPMPI) -o sceptic3Dmpi sceptic3D.F $(OBJMPI) $(LIB)
+
+# sceptic3D with MPI & HDF
+sceptic3Dmpihdf : sceptic3D.F piccom.f errcom.f piccomcg.f $(OBJMPIHDF) ./accis/libaccisX.a
+	$(G77) $(OPTCOMPMPIHDF) -o sceptic3Dmpihdf sceptic3D.F $(OBJMPIHDF) $(LIBHDF)
+
+
+# HDF related rules
+outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f $(DIRHDF)/lib/libhdf5.a
+	$(G90) -c $(OPTCOMPHDF) outputhdf.f
+
+# Though more than one hdf library used, choose one as trigger
+$(DIRHDF)/lib/libhdf5.a :
+	cd $(DIRHDF) &&	\
+	./configure --prefix=$(DIRHDF) --enable-fortran \
+	FC=$(G90nonmpi) && \
+	make -j$(NUMPROC) && \
+	make install
+# Note that providing an mpi compiler to hdf will cause it to build
+#   the MPI version, which is not needed (and didn't work on sceptic)
+
+
+# Other rules
 ./accis/libaccisX.a : ./accis/*.f
 	make -C accis
 
-orbitint : orbitint.f coulflux.o $(OBJECTS) ./accis/libaccisX.a
-	$(G77) $(COMPILE-SWITCHES) -o orbitint orbitint.f $(OBJECTS) coulflux.o $(LIBRARIES)
+orbitint : orbitint.f coulflux.o $(OBJ) ./accis/libaccisX.a
+	$(G77) $(OPTCOMP) -o orbitint orbitint.f $(OBJ) coulflux.o $(LIB)
 
 coulflux.o : tools/coulflux.f
-	$(G77) -c $(COMPILE-SWITCHES) tools/coulflux.f
+	$(G77) -c $(OPTCOMP) tools/coulflux.f
 
 fvinjecttest : fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
-	$(G77)  -o fvinjecttest $(COMPILE-SWITCHES) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIBRARIES)
+	$(G77)  -o fvinjecttest $(OPTCMOP) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIB)
 
 fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
-	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
+	$(G77) -c $(OPTCOMP) fvinject.f
 
-outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f $(HDFDIR)/lib/libhdf5.a
-	$(G90) -c $(COMPILE-SWITCHES)  $(HDFINCLUDE) outputhdf.f
 
-#pattern rule
+# Pattern rules
 %.o : %.f piccom.f errcom.f fvcom.f;
-	$(G77) -c $(COMPILE-SWITCHES) $*.f
+	$(G77) -c $(OPTCOMP) $*.f
 
 %.o : %.F piccom.f errcom.f;
-	$(G77) -c $(COMPILE-SWITCHES) $*.F
+	$(G77) -c $(OPTCOMP) $*.F
 
 % : %.f
-	$(G77)  -o $* $(COMPILE-SWITCHES) $*.f  $(LIBRARIES)
+	$(G77) -o $* $(OPTCOMP) $*.f $(LIB)
 
 % : %.F
-	$(G77)  -o $* $(COMPILE-SWITCHES) $*.F  $(LIBRARIES)
+	$(G77) -o $* $(OPTCOMP) $*.F $(LIB)
 
+
+# Distributable archive
 sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	make -C accis mproper
 	make -C tools clean
@@ -104,8 +176,11 @@ sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	tar chzf sceptic3D.tar.gz -C .. sceptic3D
 	./copyremove.sh
 
-# Indicate that the following targets will never actually exist
+
+# The following targets will never actually exist
 .PHONY: all clean cleandata cleanaccis cleanhdf cleanall ftnchek
+
+all : sceptic3D sceptic3Dhdf sceptic3Dmpi sceptic3Dmpihdf
 
 clean :
 	-rm *.o
@@ -125,8 +200,8 @@ cleanaccis :
 	-rm ./accis/libaccisX.a
 
 cleanhdf :
-	make -C $(HDFDIR) clean
-	-rm $(HDFDIR)/lib/libhdf5.a
+	make -C $(DIRHDF) clean
+	-rm $(DIRHDF)/lib/libhdf5.a
 
 cleanall :
 	make clean
@@ -137,9 +212,3 @@ cleanall :
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f
 
-$(HDFDIR)/lib/libhdf5.a :
-	cd $(HDFDIR) &&	\
-	./configure --prefix=$(HDFDIR) --enable-fortran \
-	FC=$(G90nonmpi) && \
-	make -j8 && \
-	make install

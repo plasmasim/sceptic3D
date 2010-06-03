@@ -1032,7 +1032,9 @@ c Average various fluxes and fields:
       if(myid.eq.0)then
 c Write the output files.
          call output(dt,i-1,fave,icolntype,colnwt)
+#ifdef HDF
          call outputhdf(dt,i-1,fave,icolntype,colnwt)
+#endif
          if (norbits.ge.1) call orbitoutput()
       endif
       if(writepart) call partwrt()

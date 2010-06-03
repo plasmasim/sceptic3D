@@ -285,6 +285,8 @@ c     Formally set the potential at the probe edge to zero, since the
 c     inner boundary condition lies in the right hand side of the equation (b)
                   elseif(i.eq.1)then
                      x(index)=0.
+c                    For debugging, set to zero
+                     b(index)=0.
                   endif
                endif
             enddo
@@ -702,7 +704,8 @@ c     Initialize variables for debugging
   
       call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
      $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)
-     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1),b,x(1,0,0)
+     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)
+     $     ,b(1,0,0),x(1,0,0)
      $     ,p(1,0,0) ,res(1,0,0),z(1,0,0) ,pp(1,0,0),resr(1,0,0) ,zz(1,0
      $     ,0))
 
@@ -728,7 +731,7 @@ c        First, initialize bsave and xsave just in case
          do k=0,n3
             do j=0,n2
                do i=1,n1
-                  bsave(i,j,k) = b(i-1,j,k)
+                  bsave(i,j,k) = b(i,j,k)
                   xsave(i,j,k) = x(i,j,k)
                enddo
             enddo
@@ -746,7 +749,7 @@ c                   actual beginning of the array that is passed.
                   call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
      $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
-     $              ,fpc(1,0),gpc(0,0,1),b
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
      $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
      $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
                   do m=1,n3
@@ -766,7 +769,7 @@ c                 Pass unit vectors to atimes to build A'
                   call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
      $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
-     $              ,fpc(1,0),gpc(0,0,1),b
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
      $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
      $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
                   do m=1,n3

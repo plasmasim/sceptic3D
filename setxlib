@@ -1,0 +1,8 @@
+#!/bin/bash
+# Script to choose (return) xlib version/location
+
+if [ "`uname -m`" == "x86_64" ] ; then
+    echo "/usr/X11R6/lib64/"
+else
+    echo "/usr/X11R6/lib"
+fi

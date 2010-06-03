@@ -1,92 +1,112 @@
-
 # Universal Makefile for sceptic3D
 
-#Defaults compiler (mpif77 compiler)
-ifeq ("$(G77)","")
-	G77=mpif77
-endif
-#Default Xlib (32 bit)
-ifeq ("$(XLIB)","")
-	XLIB=/usr/X11R6/lib
-endif
-#Default Accis lib
-ifeq ("$(ACCISLIB)","")
-	ACCISLIB=./accis
-endif
 
-LIBRARIES =  -L$(XLIB) -L$(ACCISLIB) -laccisX -lXt -lX11 
+# Set shell to bash (default is sh)
+SHELL := /bin/bash
 
-#Default No Warnings
-ifeq ("$(NOWARN)","")
-	NOWARN=
-endif
+# Set compilers
+G77 := $(shell ./setcomp f77)
+G77nonmpi := $(shell ./setcomp f77 nonmpi)
+G90 := $(shell ./setcomp f90)
+G90nonmpi := $(shell ./setcomp f90 nonmpi)
 
-COMPILE-SWITCHES =-Wall -Wno-unused-variable  $(NOWARN)  -O2  -I.
-# For debugging.
-#  -g  -ffortran-bounds-check
-# For profiling
-#COMPILE-SWITCHES = -Wall -O2 -pg
+# Set Xlib location
+DIRXLIB := $(shell ./setxlib)
+# Note that this may not work properly, and is not needed
+#   if X11 and Xt are in /usr/lib(64)
 
-REINJECT=orbitinject.o extint.o maxreinject.o
-
-MPICOMPILE-SWITCHES = -DMPI $(COMPILE-SWITCHES)
-
-OBJECTS = initiate.o advancing.o randc.o randf.o diags.o outputs.o	\
- chargefield.o $(REINJECT) stringsnames.o		\
-rhoinfcalc.o shielding3D.o
+# Accis lib location unless already set
+DIRACCIS ?= ./accis
 
 
-MPIOBJECTS=cg3dmpi.o mpibbdy.o shielding3D_par.o
+# Libraries and options to pass to linker
+LIB := -L$(DIRXLIB) -L$(DIRACCIS) -laccisX -lXt -lX11 
+# Show time and memory usage (debugging)
+LIB += -Wl,-stats
 
-all : makefile sceptic3D
 
-sceptic3D :  makefile sceptic3D.F  piccom.f  ./accis/libaccisX.a $(OBJECTS)
-	$(G77) $(COMPILE-SWITCHES) -o sceptic3D sceptic3D.F  $(OBJECTS) $(LIBRARIES)
+# Options to pass to compiler
+OPTCOMP := -I.
+# Show all warnings exept unused variables
+OPTCOMP += -Wall -Wno-unused-variable
+# Enable optimization
+OPTCOMP += -O2
+# Save debugging info
+OPTCOMP += -g
+# Do bounds check (debugging)
+#OPTCOMP += -ffortran-bounds-check
+# Save profiling information (debugging)
+OPTCOMP += -pg
 
-# The real Makefile
-MAKEFILE=makefile
+# Options to pass to compiler for MPI version
+OPTCOMPMPI := $(OPTCOMP)
+# Enable MPI by defining 'MPI' for pre-compiler
+OPTCOMPMPI += -DMPI
 
-makefile : Makefile MFSconfigure
-	@echo Configuring the Makefile for this platform.
-	rm -f ./accis/makefile
-	rm -f *.o
-	rm -f *./accis/*.o
-	make -C accis
-	./MFSconfigure
-	@echo Now running make again using the new Makefile
-	make -f $(MAKEFILE)
 
-sceptic3Dmpi : sceptic3D.F  piccom.f piccomcg.f ./accis/libaccisX.a $(OBJECTS) $(MPIOBJECTS) makefile
-	$(G77) $(MPICOMPILE-SWITCHES) -o sceptic3Dmpi  sceptic3D.F   $(OBJECTS) $(MPIOBJECTS) $(LIBRARIES)
+# Objects common to all versions of sceptic3D
+OBJ := initiate.o \
+       advancing.o \
+       randc.o \
+       randf.o \
+       diags.o \
+       outputs.o \
+       chargefield.o \
+       stringsnames.o \
+       rhoinfcalc.o \
+       shielding3D.o
+# Reinjection related objects
+OBJ += orbitinject.o \
+       extint.o \
+       maxreinject.o
 
+# Objects for MPI version of sceptic3D
+OBJMPI := $(OBJ) \
+          cg3dmpi.o \
+          mpibbdy.o \
+          shielding3D_par.o
+
+# Default target is serial sceptic3D without HDF support
+sceptic3D : sceptic3D.F piccom.f $(OBJ) ./accis/libaccisX.a
+	$(G77) $(OPTCOMP) -o sceptic3D sceptic3D.F $(OBJ) $(LIB)
+
+# sceptic3D with MPI
+sceptic3Dmpi : sceptic3D.F piccom.f piccomcg.f $(OBJMPI) ./accis/libaccisX.a
+	$(G77) $(OPTCOMPMPI) -o sceptic3Dmpi sceptic3D.F $(OBJMPI) $(LIB)
+
+
+# Other rules
 ./accis/libaccisX.a : ./accis/*.f
 	make -C accis
 
-orbitint : orbitint.f coulflux.o $(OBJECTS) ./accis/libaccisX.a makefile
-	$(G77) $(COMPILE-SWITCHES) -o orbitint orbitint.f $(OBJECTS) coulflux.o $(LIBRARIES)
+orbitint : orbitint.f coulflux.o $(OBJ) ./accis/libaccisX.a
+	$(G77) $(OPTCOMP) -o orbitint orbitint.f $(OBJ) coulflux.o $(LIB)
 
 coulflux.o : tools/coulflux.f
-	$(G77) -c $(COMPILE-SWITCHES) tools/coulflux.f
+	$(G77) -c $(OPTCOMP) tools/coulflux.f
 
-fvinjecttest : fvinjecttest.F makefile fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
-	$(G77)  -o fvinjecttest $(COMPILE-SWITCHES) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIBRARIES)
+fvinjecttest : fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
+	$(G77)  -o fvinjecttest $(OPTCMOP) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIB)
 
 fvinject.o : fvinject.f fvcom.f piccom.f
-	$(G77) -c $(COMPILE-SWITCHES) fvinject.f
+	$(G77) -c $(OPTCOMP) fvinject.f
 
-#pattern rule
-%.o : %.f piccom.f fvcom.f makefile;
-	$(G77) -c $(COMPILE-SWITCHES) $*.f
 
-%.o : %.F piccom.f makefile;
-	$(G77) -c $(COMPILE-SWITCHES) $*.F
+# Pattern rules
+%.o : %.f piccom.f fvcom.f;
+	$(G77) -c $(OPTCOMP) $*.f
 
-% : %.f makefile
-	$(G77)  -o $* $(COMPILE-SWITCHES) $*.f  $(LIBRARIES)
+%.o : %.F piccom.f;
+	$(G77) -c $(OPTCOMP) $*.F
 
-% : %.F makefile
-	$(G77)  -o $* $(COMPILE-SWITCHES) $*.F  $(LIBRARIES)
+% : %.f
+	$(G77) -o $* $(OPTCOMP) $*.f $(LIB)
 
+% : %.F
+	$(G77) -o $* $(OPTCOMP) $*.F $(LIB)
+
+
+# Distributable archive
 sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	make -C accis mproper
 	make -C tools clean
@@ -95,19 +115,33 @@ sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
 	tar chzf sceptic3D.tar.gz -C .. sceptic3D
 	./copyremove.sh
 
+
+# The following targets will never actually exist
+.PHONY: all clean cleandata cleanaccis cleanhdf cleanall ftnchek
+
+all : sceptic3D sceptic3Dmpi
+
 clean :
-	rm -f *.o
-	rm -f *.ps
-	rm -f *.orb
-	rm -f *.html
-	rm -f Orbits.txt
-	rm -f *~
-	rm -f makefile
+	-rm *.o
+	-rm *.ps
+	-rm *.orb
+	-rm *.html
+	-rm Orbits.txt
+	-rm *~
+
+cleandata :
+	-rm *.dat
+	-rm *.frc
+	-rm *.h5
+
+cleanaccis :
+	make -C accis clean
+	-rm ./accis/libaccisX.a
 
 cleanall :
 	make clean
-	rm -f *.dat
-	rm -f *.frc
+	make cleandata
+	make cleanaccis
 
 ftnchek :
 	ftnchek -nocheck -nof77 -calltree=text,no-sort -mkhtml -quiet -brief sceptic3D.F *.f

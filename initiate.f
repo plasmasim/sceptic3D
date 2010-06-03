@@ -143,16 +143,17 @@ c Poloidal angles, uniform psi-spacing
       pcc(NPSIUSED+1)=2*pcc(NPSIUSED)-pcc(NPSIUSED-1)
 
 
-      if(NRUSED.le.10 .and. nth.le.10) then
-         write(*,*)'r,rcc,th,tcc,thang'
-         write(*,*)(r(j),j=0,nrfull)
-         write(*,*)(rcc(j),j=0,nrfull)
-         write(*,*)(th(j),j=0,nthfull)
-         write(*,*)(tcc(j),j=0,nthfull)
-         write(*,*)(thang(j),j=0,nthfull)
-         write(*,*)(pcc(j),j=0,npsifull)
-      endif
-c      write(*,*)'th=',th
+c For debugging, don't do this since crowding output
+c      if(NRUSED.le.10 .and. nth.le.10) then
+c         write(*,*)'r,rcc,th,tcc,thang'
+c         write(*,*)(r(j),j=0,nrfull)
+c         write(*,*)(rcc(j),j=0,nrfull)
+c         write(*,*)(th(j),j=0,nthfull)
+c         write(*,*)(tcc(j),j=0,nthfull)
+c         write(*,*)(thang(j),j=0,nthfull)
+c         write(*,*)(pcc(j),j=0,npsifull)
+c      endif
+cc      write(*,*)'th=',th
 
 
 

@@ -85,6 +85,14 @@ c     processors. With Loki, can't be larger than 512.
       if(nproccg.gt.numprocs) idim1=idim1/2
       nproccg=idim1*idim2*idim3
 
+c     Quick fix for only 8 processors 
+      if(numprocs.eq.8) then
+         nproccg=8
+         idim1=2
+         idim2=2
+         idim3=2
+      endif
+
       do i=0,nproccg-1
          members(i)=i
       enddo

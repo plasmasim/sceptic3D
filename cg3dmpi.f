@@ -235,6 +235,31 @@ c Do block boundary communications, returns block info icoords...myid.
      $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $     icommcart,mycartid,mpiid,lflag,out,inn)
 
+
+
+c For debugging, if lAdebug flag set, only multiply by A; do not solve
+      if (lAdebug) then
+c        Communicate x on boundaries (needed for psi periodicity)
+         call bbdy(cg_comm,iLs,iuds,x,icg_k,iorig,ndims,idims,lperiod,
+     $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $     icommcart,mycartid,mpiid,lflag,out,inn)
+c        Do matrix multiplication
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
+     $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
+     $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
+     $     ,fpc(myorig1+Li*myorig2)
+     $     ,gpc(myorig2,myorig3,1), out)
+c        Do the final mpi_gather
+         kc=-1
+         call bbdy(cg_comm,iLs,iuds,res,kc,iorig,ndims,idims,lperiod,
+     $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $     icommcart,mycartid,mpiid,lflag,out,inn)
+c        Don't do anything else
+         return
+      endif
+
+
+
 c Initialize right hand side and x, the updated potential
 
          
@@ -480,6 +505,12 @@ c the result].
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
 
+c For debugging, also gather b for saving
+      call bbdy(cg_comm,iLs,iuds,b,kc,iorig,ndims,idims,lperiod,
+     $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $        icommcart,mycartid,mpiid,lflag,out,inn)
+
+
       cg_del=deltamax
       ierr=icg_k
 
@@ -641,8 +672,17 @@ c***********************************************************************
      $     ,pp(0:nrsize,0:nthsize ,0:npsisize),resr(0:nrsize,0:nthsize
      $     ,0:npsisize),zz(0:nrsize ,0:nthsize,0:npsisize)
 
+c     Variables used for calculating matrix A for debugging
+      real inputvect(0:nrsize,0:nthsize,0:npsisize),
+     $  outputvect(0:nrsize,0:nthsize,0:npsisize)
+      integer n1,n2,n3,j,k,l,m,n,o,jkl,mno
+
+
 c testing arrays
       integer iuds(nd),ifull(nd)
+
+c     Initialize variables for debugging
+      lAdebug = .false.
 
 
       icg_mi=mi
@@ -668,7 +708,84 @@ c testing arrays
 
       
       
-c Write x, the temporary potential file, in phi
+c For debugging, save matrix A and its transpose, as well as b and x
+      if (lsavemat .and. stepcount.eq.saveatstep) then
+c        Set flag for cg3dmpi to only multiply by A
+         lAdebug = .true.
+         n1 = ni-1
+         rshieldingsave = n1
+         n2 = nthused
+         n3 = npsiused
+c        First, initialize bsave and xsave just in case
+         do k=0,npsisizesave
+            do j=0,nthsizesave
+               do i=1,nrsizesave-1
+                  bsave(i,j,k) = 0.
+                  xsave(i,j,k) = 0.
+               enddo
+            enddo
+         enddo
+         do k=0,n3
+            do j=0,n2
+               do i=1,n1
+                  bsave(i,j,k) = b(i-1,j,k)
+                  xsave(i,j,k) = x(i,j,k)
+               enddo
+            enddo
+         enddo
+         do j=1,n3
+            do k=1,n2
+               do l=1,n1
+c                 Pass unit vectors to atimes to build A
+                  inputvect(l,k,j) = 1.
+                  lAtranspose = .false.
+c                 Note that all the arrays passed in the x(*) form
+c                   are offset by one element so that when they are
+c                   passed from within that routine as x(0) it is the
+c                   actual beginning of the array that is passed.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  lAtranspose = .true.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
+
+c Write x, the temporary potential file, to phi, and find maxchange
       if(myid2.eq.0) then
          do k=1,npsiused
             do j=1,nthused

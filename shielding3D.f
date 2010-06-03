@@ -37,6 +37,12 @@ c******************************************************************
      $     ,x(nrsize-1,0:nthsize,0:npsisize)
       integer kk1,kk2
 
+c     Variables used for calculating matrix A for debugging
+      real inputvect(nrsize-1,0:nthsize,0:npsisize),
+     $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
+      integer n2,n3,j,k,l,m,n,o,jkl,mno
+
+
       maxits=2*(nrused*nthused*npsiused)**0.333
       dconverge=1.e-5
 
@@ -73,6 +79,49 @@ c already been calculated in innerbc.f
 
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
+
+c For debugging, save matrix A and its transpose
+      if (lsavemat .and. stepcount.eq.saveatstep) then
+         rshieldingsave = n1
+         n2 = nthused
+         n3 = npsiused
+         do j=1,n3
+            do k=1,n2
+               do l=1,n1
+                  bsave(l,k,j) = b(l,k,j)
+                  xsave(l,k,j) = x(l,k,j)
+c                 Pass unit vectors to atimes to build A
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
 
 
       do k=1,npsiused

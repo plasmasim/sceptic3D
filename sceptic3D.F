@@ -55,6 +55,12 @@ c Common storage
       data readpart/.false./
       data writepart/.false./
 
+c     Variables used for calculating matrix A for debugging
+      real inputvect(nrsize-1,0:nthsize,0:npsisize),
+     $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
+      integer n1,n2,n3,m,n,o
+
+
 c Parallel processing MPI options.
 #ifdef MPI
       include 'mpif.h'
@@ -205,8 +211,10 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
-c        For debugging, give option to save phi
-         if(string(1:9) .eq. '--savephi') then
+c        For debugging, give option to save A and/or phi
+         if(string(1:9) .eq. '--savemat') then
+            lsavemat=.true.
+         elseif(string(1:9) .eq. '--savephi') then
             lsavephi=.true.
          endif
          if(string(1:2) .eq. '-s') then
@@ -622,6 +630,18 @@ c     SCEPTIC2D uses the potential at the current time step.
             write(*,'(i5,$)')i
          endif
 
+c        For debugging: Save Poisson matrices if flag set and small grid
+         stepcount = stepcount+1
+         if (lsavemat .and.
+     $     nr .le. nrsizesave .and.
+     $     nth .le. nthsizesave .and.
+     $     npsi .le. npsisizesave .and.
+     $     i .le. nstepssave) then
+            lsavemat = .true.
+         elseif (i .le. nstepssave) then
+            lsavemat = .false.
+         endif
+
 
 c     Calculate the potential field, unless it is fixed.
       if (myid2.eq.0.and.infdbl) then
@@ -675,6 +695,34 @@ c        For debugging: Save phi for first nstepssave if small grid
 
 
          if (myid.eq.0) then
+
+c             For debugging, save matrix A and its transpose,
+c               the vector b, and the result x
+                  if (lsavemat .and. stepcount .eq. saveatstep) then
+                     n1 = rshieldingsave
+                     n2 = nthused
+                     n3 = npsiused
+                     do j=1,n3
+                        do k=1,n2
+                           do l=1,n1
+                              jkl = l + (k-1)*n1 + (j-1)*n2*n1
+                              bsavevect(jkl) = bsave(l,k,j)
+                              xsavevect(jkl) = xsave(l,k,j)
+                              do m=1,n3
+                                 do n=1,n2
+                                    do o=1,n1
+                                       mno = o + (n-1)*n1 + (m-1)*n2*n1;
+                                       Amat(mno,jkl)
+     $                                   = Asave(o,n,m,l,k,j)
+                                       Atmat(mno,jkl)
+     $                                   = Atsave(o,n,m,l,k,j)
+                                    enddo
+                                 enddo
+                              enddo
+                           enddo
+                        enddo
+                     enddo
+                  endif
 
             
 c     Evaluate total charge and z-forces. Not yet implemented for NGP.

@@ -92,7 +92,7 @@ c Variables for debugging
       lsavephi = .false.
       lfirsttime = .true.
       stepcount = 0
-      saveatstep = 10
+      saveatstep = 1
 c     Don't symmetrize A by default and use minimum residual (i.e. Leo's ver.)
       lmultpc=.false.
       lbcg=.false.
@@ -808,6 +808,13 @@ c                     write(*,'(a,$)') "."
                write(*,'('':'',i3,$)')totiter
 #ifdef MPI
             elseif(cgparallel.and.myid2.ge.0) then
+c           For debugging, broadcast potential and density to slaves
+               call MPI_BCAST(rho,(nrsize+1)*(nthsize+1)*(npsiused+2),
+     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
+               call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
+     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
+               call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
+     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
                if(nonlin) then
  629              if((maxdphi.gt.dconverge.or.dconvergenl.gt.dconverge)
      $              .and. totiter.lt.999) then

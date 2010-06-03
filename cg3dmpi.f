@@ -284,12 +284,21 @@ c Initialize right hand side and x, the updated potential
                endif
                if(inn) then
                   if(i.eq.2) then
+cc                 For debugging, make index 3 for consistency
+c                  if(i.eq.3) then
                      b(index)=b(index)-bpc(myorig1+i-1) *u(index-iLs(1))
+cc                    For debugging, set to 1 as marker
+c                     b(index)=1.
 c     Formally set the potential at the probe edge to zero, since the
 c     inner boundary condition lies in the right hand side of the equation (b)
                   elseif(i.eq.1)then
+cc                 For debugging, make index 2 for consistency
+c                  elseif(i.eq.2)then
                      x(index)=0.
-cc                    For debugging, set b to zero as well
+cc                    For debugging, set to 1 as marker
+c                     x(index)=1.
+c                     b(index)=1.
+cc                    For debugging, set to zero
 c                     b(index)=0.
                   endif
                endif
@@ -308,6 +317,8 @@ c       (if lmultpc set), for debugging
       do k=1,myside(3)
          do j=1,myside(2)
             do i=1,myside(1)
+cc           For debugging, start at 2 to avoid multiplying by 0 for i=1
+c            do i=2,myside(1)
 c              Note that the definition of index is such that it starts
 c                at 0, so that i=1 actually addresses the 0 element of b
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
@@ -334,9 +345,13 @@ c     first search direction is the first residual
       do k=2,myside(3)-1
          do j=2,myside(2)-1
             do i=1,myside(1)-1
+cc           For debugging, start from 2 to make consistent
+c            do i=2,myside(1)-1
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                res(index)=b(index)-res(index)
                if(inn.and.i.eq.1) res(index)=0.
+cc              For debugging, make index two to be consistent
+c               if(inn.and.i.eq.2) res(index)=0.
 c              The following line is required for the bcg method
 c              For debugging, also set resr to zero
                resr(index)=res(index)
@@ -395,6 +410,8 @@ c Do block boundary communications
          do k=2,myside(3)-1
             do j=2,myside(2)-1
                do i=2,myside(1)-1
+cc              For debugging, start at 1
+c               do i=1,myside(1)-1
                   index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                   bknum=bknum+z(index)*resr(index)
                enddo
@@ -410,6 +427,8 @@ c     Sum bknum over all the participating nodes
             do k=2,myside(3)-1
                do j=2,myside(2)-1
                   do i=2,myside(1)-1
+cc                 For debugging, start at 1
+c                  do i=1,myside(1)-1
                      index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                      p(index)=z(index)
                      pp(index)=zz(index)
@@ -417,6 +436,8 @@ c     Sum bknum over all the participating nodes
                enddo
             enddo
             i=1
+cc           For debugging, make index two to be consistent
+c            i=2
             if(inn) then
                do k=2,myside(3)-1
                   do j=2,myside(2)-1
@@ -432,6 +453,8 @@ c     Sum bknum over all the participating nodes
             do k=2,myside(3)-1
                do j=2,myside(2)-1
                   do i=2,myside(1)-1
+cc                 For debugging, start at 1
+c                  do i=1,myside(1)-1
                      index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                      p(index)=bk*p(index)+z(index)
                      pp(index)=bk*pp(index)+zz(index)
@@ -439,6 +462,8 @@ c     Sum bknum over all the participating nodes
                enddo
             enddo
             i=1
+cc           For debugging, make index two to be consistent
+c            i=2
             if(inn) then
                do k=2,myside(3)-1
                   do j=2,myside(2)-1
@@ -474,6 +499,8 @@ c     Sum bknum over all the participating nodes
          do k=2,myside(3)-1
             do j=2,myside(2)-1
                do i=2,myside(1)-1
+cc              For debugging, start at 1
+c               do i=1,myside(1)-1
                   index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                   akden=akden+z(index)*pp(index)
                enddo
@@ -503,6 +530,8 @@ c        For debugging, give bcg option by using lbcg as transpose flag
          do k=2,myside(3)-1
             do j=2,myside(2)-1
                do i=2,myside(1)-1
+cc              For debugging, start at 1
+c               do i=1,myside(1)-1
                   index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                   delta=ak*p(index)
                   x(index)=x(index)+delta

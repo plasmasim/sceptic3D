@@ -515,6 +515,10 @@ c           Set factor to multiply each equation by to ensure symmetry of A
                endif
             else
                multpc(i,j)=1.
+c              Note that i=1 remains zero, so if that element is ever
+c                used this needs to be modified
+c              For debuggin, also set i=0 elements
+               multpc(1,j)=1.
             endif
 
          enddo

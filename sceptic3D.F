@@ -93,8 +93,8 @@ c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
       saveatstep = 1
-c     Use minimum residual method by default (i.e. Leo's solver)
-      lbcg=.false.
+c     Use biconjugate gradient method as default solver
+      lbcg=.true.
 
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
@@ -242,8 +242,9 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
-         if(string(1:5) .eq. '--bcg') then
-            lbcg=.true.
+c        For debugging, allow use of minimum residual method
+         if(string(1:8) .eq. '--minres') then
+            lbcg=.false.
          endif
 c        For debugging, give option to save A and/or phi
          if(string(1:9) .eq. '--savemat') then

@@ -966,6 +966,18 @@ c     Single value variables
       call writehdfrealmat(group_id,dsetname,
      $ debyelen,storage_dims,data_dims,rank)
 
+      dsetname = 'vprobe'
+      call writehdfrealmat(group_id,dsetname,
+     $ vprobe,storage_dims,data_dims,rank)
+
+      dsetname = 'Ezext'
+      call writehdfrealmat(group_id,dsetname,
+     $ Ezext,storage_dims,data_dims,rank)
+
+      dsetname = 'lbcg'
+      call writehdfintmat(group_id,dsetname,
+     $ lbcg,storage_dims,data_dims,rank)
+
 c     Variable arrays
       rank = 1
       data_dims(1) = nr+1

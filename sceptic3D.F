@@ -93,8 +93,7 @@ c Variables for debugging
       lfirsttime = .true.
       stepcount = 0
       saveatstep = 1
-c     Don't symmetrize A by default and use minimum residual (i.e. Leo's ver.)
-      lmultpc=.false.
+c     Use minimum residual method by default (i.e. Leo's solver)
       lbcg=.false.
 
 c Full size arrays by default. Can be changed later by switches.
@@ -243,10 +242,7 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
-c        For debugging, give option to symmetrize A and/or to use bcg
-         if(string(1:4) .eq. '--sA') then
-            lmultpc=.true.
-         elseif(string(1:5) .eq. '--bcg') then
+         if(string(1:5) .eq. '--bcg') then
             lbcg=.true.
          endif
 c        For debugging, give option to save A and/or phi
@@ -255,6 +251,7 @@ c        For debugging, give option to save A and/or phi
          elseif(string(1:9) .eq. '--savephi') then
             lsavephi=.true.
          endif
+         
          if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif

@@ -512,22 +512,6 @@ c        For debugging, check for negative elements
 
             fpc(i,j)=apc(i)+bpc(i)+cpc(i,j)+dpc(i,j)+2*epc(i,j)
 
-c           Set factor to multiply each equation by to ensure symmetry of A
-            if (lmultpc) then
-               multpc(i,j)=rave
-               if(j.eq.1)then
-                  multpc(i,j)=rave/2.
-               elseif(j.eq.NTHUSED)then
-                  multpc(i,j)=rave/2.
-               endif
-            else
-               multpc(i,j)=1.
-c              Note that i=1 remains zero, so if that element is ever
-c                used this needs to be modified
-c              For debuggin, also set i=0 elements
-               multpc(1,j)=1.
-            endif
-
          enddo
       enddo
 

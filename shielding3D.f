@@ -79,15 +79,6 @@ c already been calculated in innerbc.f
          enddo
       enddo
 
-c     Multiply each element of b by the appropriate factor to make A symmetric
-c       (if lmultpc set), for debugging
-      do k=1,npsiused
-         do j=1,nthused
-            do i=2,n1
-               b(i,j,k) = b(i,j,k)*multpc(i,j)
-            enddo
-         enddo
-      enddo
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
 
@@ -281,7 +272,6 @@ c           For debugging, also set resr to zero
       enddo
 
 c     Following line used for minimum residual method
-c     For debugging, give bcg option
       if (.not. lbcg) then
          call atimes(n1,n2,n3,res,resr,.false.)
       endif
@@ -343,7 +333,7 @@ c     Main loop
             enddo
          enddo
          ak=bknum/akden
-c        For debugging, give bcg option by using lbcg as transpose flag
+c        Give bcg option by using lbcg as transpose flag
          call atimes(n1,n2,n3,pp,zz,lbcg)
          
          deltamax=0.
@@ -403,11 +393,6 @@ c            z(i,j,k) = b(i,j,k)
                z(i,j,k)=b(i,j,k)/(-fpc(i,j)-exp(phi(i,j,k)))
 cc              For debugging ,make preconditioner identiy matrix
 c               z(i,j,k)=b(i,j,k)
-
-c              Divide by appropriate factor to make A symmetric
-c                (if lmultpc), for debugging
-               z(i,j,k)=z(i,j,k)/multpc(i,j)
-
                error=error+b(i,j,k)**2
             enddo
          enddo
@@ -421,11 +406,6 @@ c                (if lmultpc), for debugging
      $           +apc(i)*gpc(j,k,5))
 cc              For debugging ,make preconditioner identiy matrix
 c               z(i,j,k)=b(i,j,k)
-
-c              Divide by appropriate factor to make A symmetric
-c                (if lmultpc), for debugging
-               z(i,j,k)=z(i,j,k)/multpc(i,j)
-
             error=error+b(i,j,k)**2
          enddo
       enddo
@@ -451,102 +431,89 @@ c Outputs res=Ax or A'x, where A is the finite volumes stiffness matrix
 
 
 c Elements of A'
-c     Multiply elements by the appropriate factor to make A symmetric
-c       (if lmultpc set), for debugging
-c     Note that the transpose makes it necesary to multiply coeficients
-c       rather than just each element of the result
-c     Also note that implementing the boundary condition in the transpose
+c     Note that implementing the boundary condition in the transpose
 c       matrix is slighly trickier since the affected elements now
 c       are are spread across i=n1 and i=n1-1, and in j
 
       do k=2,n3-1
          do j=1,n2
             do i=1,n1-2
-               res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $           + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $           + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $           + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+               res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $           + apc(i-1)*x(i-1,j,k)
+     $           + dpc(i,j+1)*x(i,j+1,k)
+     $           + cpc(i,j-1)*x(i,j-1,k)
+     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
             enddo
             i=n1-1
-            res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $        *x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+            res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
             i=n1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
-     $        *x(i,j+1,k)*multpc(i,j+1)
-     $        + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
-     $        *x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))*multpc(i,j)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $        + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
      $        - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
-     $        *x(i,j,k)*multpc(i,j)
+     $        *x(i,j,k)
          enddo
       enddo
 
       k=1
       do j=1,n2
          do i=1,n1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
          enddo
          i=n1-1
-         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $     *x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + dpc(i,j+1)*x(i,j+1,k)
+     $     + cpc(i,j-1)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
          i=n1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
-     $     *x(i,j+1,k)*multpc(i,j+1)
-     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
-     $     *x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))*multpc(i,j)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
      $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
-     $     *x(i,j,k)*multpc(i,j)
+     $     *x(i,j,k)
       enddo
       k=n3
       do j=1,n2
          do i=1,n1
-            res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $        + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $        + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $        + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $        + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
-     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
          enddo
          i=n1-1
-         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))
-     $     *x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + dpc(i,j+1)*x(i,j+1,k)*multpc(i,j+1)
-     $     + cpc(i,j-1)*x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
-     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)*multpc(i,j)
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + dpc(i,j+1)*x(i,j+1,k)
+     $     + cpc(i,j-1)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
          i=n1
-         res(i,j,k) = bpc(i+1)*x(i+1,j,k)*multpc(i+1,j)
-     $     + apc(i-1)*x(i-1,j,k)*multpc(i-1,j)
-     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))
-     $     *x(i,j+1,k)*multpc(i,j+1)
-     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))
-     $     *x(i,j-1,k)*multpc(i,j-1)
-     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))*multpc(i,j)
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
      $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
-     $     *x(i,j,k)*multpc(i,j)
+     $     *x(i,j,k)
       enddo
 
 
@@ -634,18 +601,9 @@ c The solution x one node further the boundary
 
       enddo
 
-c     Multiply each row by the appropriate factor to make A symmetric
-c       (if lmultpc set), for debugging
-      do k=1,n3
-         do j=1,n2
-            do i=1,n1
-               res(i,j,k) = res(i,j,k)*multpc(i,j)
-            enddo
-         enddo
-      enddo
-
-
       endif
+
+
 
 
       end

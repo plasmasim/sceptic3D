@@ -437,7 +437,10 @@ c       are are spread across i=n1 and i=n1-1, and in j
 
       do k=2,n3-1
          do j=1,n2
-            do i=1,n1-2
+c           Strictly speaking we should be doing i=1 since the
+c             transpose will have a non-zero element, but since
+c             x(i=1)=0, that element doesn't affect the solution
+            do i=2,n1-2
                res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $           + apc(i-1)*x(i-1,j,k)
      $           + dpc(i,j+1)*x(i,j+1,k)
@@ -465,7 +468,7 @@ c       are are spread across i=n1 and i=n1-1, and in j
 
       k=1
       do j=1,n2
-         do i=1,n1
+         do i=2,n1-2
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $        + apc(i-1)*x(i-1,j,k)
      $        + dpc(i,j+1)*x(i,j+1,k)
@@ -491,7 +494,7 @@ c       are are spread across i=n1 and i=n1-1, and in j
       enddo
       k=n3
       do j=1,n2
-         do i=1,n1
+         do i=2,n1-2
             res(i,j,k) = bpc(i+1)*x(i+1,j,k)
      $        + apc(i-1)*x(i-1,j,k)
      $        + dpc(i,j+1)*x(i,j+1,k)

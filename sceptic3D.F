@@ -83,12 +83,17 @@ c Variables for debugging
       lsavephi = .false.
       stepcount = 0
       saveatstep = 1
+c     Use biconjugate gradient method as default solver
+      lbcg=.true.
 
 c Full size arrays by default. Can be changed later by switches.
       nr=nrsize
       nth=nthsize
       if(LCIC) nth=nthsize-1
       npsi=npsisize-1
+c Note: npsi should not be set lower than 4 since this causes indexing
+c   problems in the parallel solver, and nth cannot be lower than 3
+c   (determined during debugging).
 
       
 
@@ -211,12 +216,17 @@ c restore defaults on read error.
             cgparallel=.true.
          endif
 #endif
+c        For debugging, allow use of minimum residual method
+         if(string(1:8) .eq. '--minres') then
+            lbcg=.false.
+         endif
 c        For debugging, give option to save A and/or phi
          if(string(1:9) .eq. '--savemat') then
             lsavemat=.true.
          elseif(string(1:9) .eq. '--savephi') then
             lsavephi=.true.
          endif
+         
          if(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif

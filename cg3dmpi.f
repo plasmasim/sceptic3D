@@ -123,7 +123,7 @@ c     q is the "charge density".
 c
       subroutine cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi,u,q
      $     ,ictl,ierr,mpiid,idim1,idim2,idim3,apc,bpc,cpc,dpc,epc,fpc
-     $     ,gpc,b,x,p,res,z,pp,resr,zz)
+     $     ,gpc,b,x,p,res,z,pp,resr,zz,lbcg)
 
       integer cg_comm,mpiid
 c     The number of dimensions, 3 here.
@@ -190,6 +190,9 @@ c     Index for array storage
 c     Temporary arrays for the cg solver
       real b(*),x(*),p(*),res(*),z(*),pp(*),resr(*),zz(*)
       
+c     Flag to use biconjugate gradient method (not minimum residual)
+      logical lbcg
+
  
 c-------------------------------------------------------------------
 
@@ -248,7 +251,7 @@ c        Do matrix multiplication
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
      $     ,fpc(myorig1+Li*myorig2)
-     $     ,gpc(myorig2,myorig3,1), out)
+     $     ,gpc(myorig2,myorig3,1), out, lAtranspose)
 c        Do the final mpi_gather
          kc=-1
          call bbdy(cg_comm,iLs,iuds,res,kc,iorig,ndims,idims,lperiod,
@@ -285,7 +288,7 @@ c     Formally set the potential at the probe edge to zero, since the
 c     inner boundary condition lies in the right hand side of the equation (b)
                   elseif(i.eq.1)then
                      x(index)=0.
-c                    For debugging, set to zero
+c                    For debugging, set b to zero as well
                      b(index)=0.
                   endif
                endif
@@ -298,7 +301,8 @@ c Outputs Ax, where A is the cg matrix
       call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
-     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out)
+     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out,
+     $     .false.)
 
       
 c     Calculate the initial residual r=b-Ax, where x is the potential at
@@ -313,6 +317,8 @@ c     first search direction is the first residual
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                res(index)=b(index)-res(index)
                if(inn.and.i.eq.1) res(index)=0.
+c              The following line is required for the bcg method
+               resr(index)=res(index)
             enddo
          enddo
       enddo
@@ -326,11 +332,16 @@ c For the next atimesmpi, need res also on the shadow cells
 
       
 
-      call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk ,res(myorig)
+c     Following call used for minimum residual method
+      if (.not. lbcg) then
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk
+     $     ,res(myorig)
      $     ,resr(myorig),u(myorig),apc(myorig1) ,bpc(myorig1)
      $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li *myorig2)
      $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li*myorig2)
-     $     ,gpc(myorig2,myorig3 ,1),out)
+     $     ,gpc(myorig2,myorig3 ,1),out,
+     $     .false.)
+      endif
 
 
       call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
@@ -429,7 +440,9 @@ c     Sum bknum over all the participating nodes
      $        ,z(myorig),u(myorig),apc(myorig1),bpc(myorig1),cpc(myorig1
      $        +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li
      $        *myorig2) ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1
-     $        ) ,out)
+     $        ) ,out,
+     $     .false.)
+
          
          akden=0.
          
@@ -452,13 +465,14 @@ c Sum akden over all the participating nodes
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
 
-         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,pp(myorig
-     $        ),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
-     $        ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
-     $        ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
-     $        ,gpc(myorig2,myorig3,1) ,out)
+c        Implement bcg option by using lbcg as transpose flag
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,
+     $     pp(myorig),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
+     $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
+     $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
+     $     ,gpc(myorig2,myorig3,1), out,
+     $     lbcg)
 
-         
          deltamax=0.
          
          do k=2,myside(3)-1
@@ -526,7 +540,8 @@ c      mpiid=myid
 
 c***********************************************************************
 c Outputs res=Ax, where A is the finite volumes stiffness matrix
-      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,out)
+      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,out,
+     $  ltrnsp)
 
       
 c      integer ni,nj,nk
@@ -535,17 +550,58 @@ c      integer Li,Lj,Lk
       logical out
       real x(Li,Lj,nk),res(Li,Lj,nk),u(Li,Lj,nk)
       real a(ni),b(ni),c(Li,nj),d(Li,nj),e(Li,nj),f(Li,nj),g(Lj,Lk,5)
+      logical ltrnsp
 
 
 c The numbering starts at 1 and ends at n, but 1 and n are the ghost cells
+
+      if (ltrnsp) then
+
+
+c Matrix multiplication
+      do k=2,nk-1
+         do j=2,nj-1
+            do i=2,ni-1
+               res(i,j,k) = b(i+1)*x(i+1,j,k)
+     $           + a(i-1)*x(i-1,j,k)
+     $           + d(i,j+1)*x(i,j+1,k)
+     $           + c(i,j-1)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)
+            enddo
+         enddo
+      enddo
+
+c Take care of outer boundary condition
+      if(out) then
+         do k=2,nk-1
+            do j=2,nj-1
+               i=ni-2
+               res(i,j,k) = res(i,j,k)
+     $           + g(j,k,1)*a(i+1)*x(i+1,j,k)
+               i=ni-1
+               res(i,j,k) = res(i,j,k)
+     $           + g(j+1,k,2)*a(i)*x(i,j+1,k)
+     $           + g(j-1,k,3)*a(i)*x(i,j-1,k)
+     $           + g(j,k,5)*a(i)*x(i,j,k)
+            enddo
+         enddo
+      endif
+
+
+
+      else
 
 c Matrix multiplication
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-2
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       enddo
@@ -556,24 +612,35 @@ c Take care of outer boundary condition
       if(out) then
          do k=2,nk-1
             do j=2,nj-1
-               x(i+1,j,k)=g(j,k,1)*x(i-1,j,k)+g(j,k,2)*x(i,j-1,k) +g(j,k
-     $              ,3)*x(i,j+1,k)+0*g(j,k,4)+g(j,k,5) *x(i,j,k)
+               x(i+1,j,k) = g(j,k,1)*x(i-1,j,k)
+     $           + g(j,k,2)*x(i,j-1,k)
+     $           + g(j,k,3)*x(i,j+1,k)
+     $           + 0*g(j,k,4)
+     $           + g(j,k,5)*x(i,j,k)
 
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       else
          do k=2,nk-1
             do j=2,nj-1
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       endif
       
+      endif
+
       
       end
 
@@ -595,7 +662,7 @@ c Matrix multiplication
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-1
-               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))               
+               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))
             enddo
          enddo
       enddo
@@ -707,7 +774,7 @@ c     Initialize variables for debugging
      $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)
      $     ,b(1,0,0),x(1,0,0)
      $     ,p(1,0,0) ,res(1,0,0),z(1,0,0) ,pp(1,0,0),resr(1,0,0) ,zz(1,0
-     $     ,0))
+     $     ,0),lbcg)
 
       
       
@@ -751,7 +818,7 @@ c                   actual beginning of the array that is passed.
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
      $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
      $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
-     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
                   do m=1,n3
                      do n=1,n2
                         do o=1,n1
@@ -771,7 +838,7 @@ c                 Pass unit vectors to atimes to build A'
      $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
      $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
      $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
-     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0))
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
                   do m=1,n3
                      do n=1,n2
                         do o=1,n1
@@ -798,6 +865,7 @@ c Write x, the temporary potential file, to phi, and find maxchange
             enddo
          enddo
       endif
+
 
       k=icg_k
       

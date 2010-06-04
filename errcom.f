@@ -6,7 +6,7 @@ c     Flag indicating whether to save potential for nstepsssave steps
       logical lsavephi
 c     Max grid size and steps to save
       integer nrsizesave,nthsizesave,npsisizesave,nstepssave
-      parameter (nrsizesave=61,nthsizesave=11,npsisizesave=11
+      parameter (nrsizesave=31,nthsizesave=11,npsisizesave=11
      $  ,nstepssave=2001)
 c     The potential normalized to Te/e
       real phisave(0:nrsizesave,0:nthsizesave,0:npsisizesave,

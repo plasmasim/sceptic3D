@@ -292,12 +292,6 @@ c                    For debugging, set b to zero as well
                      b(index)=0.
                   endif
                endif
-cc              For debugging, set b and x to zero for j=1 and k=1
-cc              Should probably just not do loop for these values
-c               if(j .eq. 1 .or. k .eq. 1) then
-c                  x(index)=0.
-c                  b(index)=0.
-c               endif
             enddo
          enddo
       enddo
@@ -776,16 +770,6 @@ c     Initialize variables for debugging
       
       ictl=1
   
-cc        For debugging, intitialize b and x
-c            do k=0,npsisize
-c               do j=0,nthsize
-c                  do i=0,nrsize
-c                     b(i,j,k) = 0.
-c                     x(i,j,k) = 0.
-c                  enddo
-c               enddo
-c            enddo
-
       call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
      $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)
      $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)

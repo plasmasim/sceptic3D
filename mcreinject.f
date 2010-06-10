@@ -64,7 +64,7 @@ c Set velocity and position of injected particle
 c Do the outer flux accumulation
 c     Assuming potential is zero at boundary, so no change to sum
       spotrein = spotrein + 0.
-c     I think nrein just holds the number of reinjections, so increment it
+c     Have injected another particle, so increment nrein
       nrein = nrein + 1
 
       end
@@ -90,18 +90,12 @@ c     Angles of face center and solid angle of face
       real theta, psi, solidangle
 c     Normal to face
       real normal(mcrndim)
-c     Magnitude of velocity normal to face and cumulative and tot normalv
+c     Magnitude of velocity normal to face and cumulative normalv
       real normalv, cumnormv
 c     Cumulative weight for faces
       real cumweight
 c     Working variables
-      integer i, j, k, idum
-
-c Set seed for rand(), which is called through the reshuffler ran0()
-c   Doesn't really belong here...should perhaps do this in sceptic3D.
-      call srand(myid+1)
-c     Argument of ran0 and gasdev doesn't do anything, so just set to 1
-      idum = 1
+      integer i, j, k
 
 c Set theta and psi grid (i.e. define injection faces)
       costhstep = 2./mcrntheta
@@ -181,12 +175,12 @@ c   a collisional time
       implicit none
 c Input variables
 c     Number of dimensions of particle info (generally 3 or 6, depending
-c       on whether or not positional info is included
+c       on whether or not positional info is included)
       integer ndims
 c     Number of particles
       integer n
 c     Index of first dimension to put velocity info in (1 or 4, depending
-c       on whether or not positional info is included
+c       on whether or not positional info is included)
       integer dimmin
 c     Particle velocities to be output
       real velocities(ndims,n)
@@ -242,19 +236,15 @@ c           Initial perpendicular velocity
             call cross(velocities(dimmin,i),magdir(1),vperp(1))
             call cross(magdir(1),vperp(1),vperp(1))
             vperpmag = sqrt(dot(vperp(1),vperp(1),mcrndim))
-c           E cross B drift if collisions
-cc            call cross(Eneut(1),magdir(1),ecbdr(1))
             do j=1,mcrndim
                vpar(j) = magdir(j)*dot(velocities(dimmin,i),
      $           magdir(1),mcrndim)
                if (colldt.gt.0.) then
-cc                  ecbdr(j) = ecbdr(j)/Bz
                   epardv(j)=magdir(j)*dot(Eneut(1),magdir(1),mcrndim)*
      $              colldt
                else
 c                 If no collisions, the drift is specified
                   epardv(j)=magdir(j)*dot(drvect(1),magdir(1),mcrndim)
-cc                  ecbdr(j) = drvect(j) - epardv(j)
                endif
                vperpx(j) = vperp(j)/vperpmag
             enddo
@@ -276,13 +266,11 @@ c           No magnetic field, so no E cross B and no perp dir.
 c                 No collisions, so just add specified drift
                   epardv(j) = drvect(j)
                endif
-cc               ecbdr(j) = 0.
             enddo
          endif
 c        Set final velocity
          do j=1,mcrndim
-cc            velocities(dimmin-1+j,i) = vpar(j) + vperp(j) + epardv(j) + ecbdr(j)
-            velocities(dimmin-1+j,i) = vpar(j) +vperp(j) +epardv(j) +
+            velocities(dimmin-1+j,i) = vpar(j) + vperp(j) + epardv(j) +
      $        ecbdrift(j)
          enddo
       enddo

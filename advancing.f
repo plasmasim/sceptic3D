@@ -854,10 +854,13 @@ c     well as the probe potential.
 
       include 'piccom.f'
       include 'errcom.f'
+c      include 'colncom.f'
       real dt
       integer n1
       real phislopeconst,phislopefac
 
+cc     Position vector and associated quantities
+c      real rpos(3), rs, ct, st, cp, sp
 
 c Set appropriate probe potential.
       call innerbc(1,dt)
@@ -887,6 +890,18 @@ c bcp=2 -> Phiout=0
          do k=0,npsiused+1
             do j=0,nthused+1
                phi(n1+1,j,k)=0.
+cc              When allowing different parallel neutral and ion drifts,
+cc                there needs to be a corresponding electric field at the boundary
+c               rs = rcc(n1+1)
+c               ct = tcc(j)
+c               st = sqrt(1.-ct**2)
+c               cp = cos(pcc(k))
+c               sp = sin(pcc(k))
+c               rpos(3)=rs*ct
+c               rpos(2)=(rs*st)*sp
+c               rpos(1)=(rs*st)*cp
+c               phi(n1+1,j,k) = phi(n1+1,j,k) + dot(rpos, Eneut, 3)
+
                gpc(j,k,4)=phi(n1+1,j,k)
             enddo
          enddo
@@ -962,6 +977,8 @@ c     write(*,*)'Negative adeficit',adeficit,' set to zero'
 c***********************************************************************
 c Initialization for Collisions
       subroutine colninit(colnwt,icolntype)
+      real colnwt
+      integer icolntype
       include 'piccom.f'
       include 'errcom.f'
       include 'colncom.f'

@@ -523,10 +523,12 @@ c         write(*,521)((fpc(i,j),i=1,10),j=0,NTHFULL)
 c 521     format(10g8.2)
 c      endif
 
-c Initialize the fields. (Changed the order of finit and injinit)
-      call finit()
+c Set seed for rand(), which is called through the reshuffler ran0()
+      call srand(myid+1)
 c Initialize collisions and related fields.
       call colninit(colnwt,icolntype)
+c Initialize the fields. (Changed the order of finit and injinit)
+      call finit()
 c Initialize the random functions for reinjection.
       call injinit(icolntype,bcr,colnwt)
 c Initialize velocity diagnostics
@@ -806,13 +808,15 @@ c                     write(*,'(a,$)') "."
                write(*,'('':'',i3,$)')totiter
 #ifdef MPI
             elseif(cgparallel.and.myid2.ge.0) then
-c           For debugging, broadcast potential and density to slaves
-               call MPI_BCAST(rho,(nrsize+1)*(nthsize+1)*(npsiused+2),
-     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
-               call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
-     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
-               call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
-     $           MPI_REAL,0,MPI_COMM_WORLD,ierr)
+cc           For debugging, broadcast potential and density to slaves
+c               call MPI_BCAST(gpc,(nthsize+1)*(npsisize+1)*5,
+c     $           MPI_REAL,0,cg_comm,ierr)
+c               call MPI_BCAST(rho,(nrsize+1)*(nthsize+1)*(npsiused+2),
+c     $           MPI_REAL,0,cg_comm,ierr)
+c               call MPI_BCAST(phi,(nrsize+1)*(nthsize+1)*(npsiused+2),
+c     $           MPI_REAL,0,cg_comm,ierr)
+c               call MPI_BCAST(phiaxis,(nrsize+1)*2*(npsiused+2),
+c     $           MPI_REAL,0,cg_comm,ierr)
                if(nonlin) then
  629              if((maxdphi.gt.dconverge.or.dconvergenl.gt.dconverge)
      $              .and. totiter.lt.999) then

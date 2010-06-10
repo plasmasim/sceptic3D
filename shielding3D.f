@@ -46,7 +46,7 @@ c     Variables used for calculating matrix A for debugging
 
 c      maxits=2*(nrused*nthused*npsiused)**0.333
 c     For debugging, increase this
-      maxits=2*(nrused*nthused*npsiused)**0.333*10
+      maxits = nrused*nthused*npsiused
 
 c Set the potential on axis to what the solver found at the previous timestep
       do i=2,n1

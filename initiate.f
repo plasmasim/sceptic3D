@@ -292,8 +292,12 @@ c     (potential straightforwardly obtained by poisson's equation
       subroutine finit()
       include 'piccom.f'
       include 'errcom.f'
+c      include 'colncom.f'
       real decay
       
+cc     Position vector and associated quantities
+c      real rpos(3), rs, ct, st, cp, sp
+
 c     When the simulation starts, the ion density is uniform, so start
 c     with a Debye Huckel form only accounting for the electron response
       decay=debyelen
@@ -310,6 +314,17 @@ c     Debye Huckel initialization.
                phi(i,j,k)=vprobe*r(1)/r(i)*exp(-(r(i)-r(1))/decay)
      $              +Exext*cos(pcc(k))*sqrt(1-tcc(j)**2)* (r(1)/r(i))**2
      $              *((r(i)+decay)/(1+decay))*exp(-(r(i)-r(1))/decay)
+cc              When allowing different parallel neutral and ion drifts,
+cc                add an initially uniform electric field
+c               rs = rcc(i)
+c               ct = tcc(j)
+c               st = sqrt(1.-ct**2)
+c               cp = cos(pcc(k))
+c               sp = sin(pcc(k))
+c               rpos(3)=rs*ct
+c               rpos(2)=(rs*st)*sp
+c               rpos(1)=(rs*st)*cp
+c               phi(i,j,k) = phi(i,j,k) + dot(rpos, Eneut, 3)
             enddo
             phi(0,j,k)=2.5*phi(1,j,k)-2*phi(2,j,k)+0.5*phi(3,j,k)
          enddo

@@ -52,7 +52,7 @@ OPTCOMP += -g
 # Do bounds check (debugging)
 #OPTCOMP += -ffortran-bounds-check
 # Save profiling information (debugging)
-OPTCOMP += -pg
+#OPTCOMP += -pg
 
 # Options to pass to compiler for HDF version
 OPTCOMPHDF := $(OPTCOMP)

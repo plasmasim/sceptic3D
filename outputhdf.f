@@ -1151,6 +1151,10 @@ c     Single value variables
       call writehdfintmat(group_id,dsetname,
      $ saveatstep,storage_dims,data_dims,rank)
 
+      dsetname = 'rshieldingsave'
+      call writehdfintmat(group_id,dsetname,
+     $ rshieldingsave,storage_dims,data_dims,rank)
+
 c     Variable arrays
       if (lsavephi) then
 
@@ -1224,7 +1228,7 @@ c     Variable arrays
       data_dims(1) = rshieldingsave
       data_dims(2) = nthused+1
       data_dims(3) = npsiused+1
-      storage_dims(1) = nrsizesave-1
+      storage_dims(1) = nrsizesave
       storage_dims(2) = nthsizesave+1
       storage_dims(3) = npsisizesave+1
 
@@ -1238,7 +1242,7 @@ c     Variable arrays
 
       rank = 1
       data_dims(1) = rshieldingsave*nthused*npsiused
-      storage_dims(1) = (nrsizesave-1)*(nthsizesave+1)*(npsisizesave+1)
+      storage_dims(1) = nrsizesave*(nthsizesave+1)*(npsisizesave+1)
 
       dsetname = 'bsavevect'
       call writehdfrealmat(group_id,dsetname,

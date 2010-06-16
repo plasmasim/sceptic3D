@@ -4,7 +4,7 @@
 # Created: 1993-05-16
 # Public domain
 
-# $Id: mkinstalldirs 9902 2005-02-01 04:17:02Z jlaird $
+# $Id: mkinstalldirs,v 1.1 2010/06/16 15:38:21 chaako Exp $
 
 errstatus=0
 dirmode=""

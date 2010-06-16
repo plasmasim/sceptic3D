@@ -16,7 +16,7 @@ dnl access to either file, you may request a copy from help@hdfgroup.org.
 dnl ----------------------------------------------------------------------
 dnl Initialize configure.
 dnl
-AC_REVISION($Id: configure.in 17851 2009-11-09 16:28:35Z epourmal $)
+AC_REVISION($Id: configure.in,v 1.1 2010/06/16 15:38:21 chaako Exp $)
 AC_PREREQ([2.53])
 
 dnl AC_INIT takes the name of the package, the version number, and an

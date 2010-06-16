@@ -30,6 +30,7 @@ c***********************************************************************
 c Interpolate onto the theta mesh. Return nearest index, fraction in thf.
       integer function interpth(ct,thf)
       include 'piccom.f'
+      include 'errcom.f'
       ithl=itpre(1+int((ct-th(1))*tfac))
       thf=(ct-th(ithl))/(th(ithl+1)-th(ithl))
       if(thf.gt.1.)then
@@ -47,6 +48,7 @@ c***********************************************************************
 c Interpolate onto the psi mesh. Return nearest index, fraction in pf.
       integer function interppsi(sp,cp,pf)
       include 'piccom.f'
+      include 'errcom.f'
       real psi
 
       psi=atan2(sp,cp)
@@ -77,6 +79,7 @@ c***********************************************************************
       real rmax
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
 
       r(0)=1.-(rmax-1.)/(NRUSED-1)
       rcc(0)=r(0)
@@ -140,16 +143,17 @@ c Poloidal angles, uniform psi-spacing
       pcc(NPSIUSED+1)=2*pcc(NPSIUSED)-pcc(NPSIUSED-1)
 
 
-      if(NRUSED.le.10 .and. nth.le.10) then
-         write(*,*)'r,rcc,th,tcc,thang'
-         write(*,*)(r(j),j=0,nrfull)
-         write(*,*)(rcc(j),j=0,nrfull)
-         write(*,*)(th(j),j=0,nthfull)
-         write(*,*)(tcc(j),j=0,nthfull)
-         write(*,*)(thang(j),j=0,nthfull)
-         write(*,*)(pcc(j),j=0,npsifull)
-      endif
-c      write(*,*)'th=',th
+c For debugging, don't do this since crowding output
+c      if(NRUSED.le.10 .and. nth.le.10) then
+c         write(*,*)'r,rcc,th,tcc,thang'
+c         write(*,*)(r(j),j=0,nrfull)
+c         write(*,*)(rcc(j),j=0,nrfull)
+c         write(*,*)(th(j),j=0,nthfull)
+c         write(*,*)(tcc(j),j=0,nthfull)
+c         write(*,*)(thang(j),j=0,nthfull)
+c         write(*,*)(pcc(j),j=0,npsifull)
+c      endif
+cc      write(*,*)'th=',th
 
 
 
@@ -197,6 +201,7 @@ c Initializing particles.
       subroutine pinit()
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       real sd
 
 c drift velocity angle
@@ -274,6 +279,7 @@ c     potential, since reading the external particle position is enough
 c     (potential straightforwardly obtained by poisson's equation
       subroutine finit()
       include 'piccom.f'
+      include 'errcom.f'
       real decay
       
 c     When the simulation starts, the ion density is uniform, so start
@@ -347,6 +353,7 @@ c************************************************************************
       subroutine precalc()
 c     Precalculation functions
       include 'piccom.f'
+      include 'errcom.f'
 
       
       rfac=(nrpre-1.)/(r(NRUSED)-r(1))
@@ -441,6 +448,7 @@ c mesh initiation.
 
 c Common data:
       include 'piccom.f'
+      include 'errcom.f'
       real rave,dpsi
 c Initiate rave to avoid warnings at compilation
       rave=1.
@@ -575,6 +583,7 @@ c     and energy is negative. The assumption of angular momentum
 c     conservation is false for non-symmetric situations.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       ih=0
       hf=66.
@@ -626,6 +635,7 @@ c     and energy is negative. The assumption of angular momentum
 c     conservation is false for non-symmetric situations.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       ih=0
       hf=66.
@@ -653,6 +663,7 @@ c********************************************************************
 
       function mtrapped()
       include 'piccom.f'
+      include 'errcom.f'
       integer istrapped
 
       mtrapped=0

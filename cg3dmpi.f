@@ -48,6 +48,7 @@ c     processors. With Loki, can't be larger than 512.
 
 
       include 'piccom.f'
+      include 'errcom.f'
       include 'mpif.h'
 
       idim1=nint((numprocs*NRUSED**2/ (NTHUSED*NPSIUSED*1.))**(1./3))
@@ -84,6 +85,14 @@ c     processors. With Loki, can't be larger than 512.
       if(nproccg.gt.numprocs) idim1=idim1/2
       nproccg=idim1*idim2*idim3
 
+c     Quick fix for only 8 processors 
+      if(numprocs.eq.8) then
+         nproccg=8
+         idim1=2
+         idim2=2
+         idim3=2
+      endif
+
       do i=0,nproccg-1
          members(i)=i
       enddo
@@ -114,7 +123,7 @@ c     q is the "charge density".
 c
       subroutine cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi,u,q
      $     ,ictl,ierr,mpiid,idim1,idim2,idim3,apc,bpc,cpc,dpc,epc,fpc
-     $     ,gpc,b,x,p,res,z,pp,resr,zz)
+     $     ,gpc,b,x,p,res,z,pp,resr,zz,lbcg)
 
       integer cg_comm,mpiid
 c     The number of dimensions, 3 here.
@@ -158,6 +167,7 @@ c     lflag, decide if we call bbdy for the first time or not
 
       
       include 'piccomcg.f'
+      include 'errcom.f'
 
 c The origin of blocks structure may be considered
 c      integer iorig(idim1+1,idim2+1)
@@ -180,6 +190,9 @@ c     Index for array storage
 c     Temporary arrays for the cg solver
       real b(*),x(*),p(*),res(*),z(*),pp(*),resr(*),zz(*)
       
+c     Flag to use biconjugate gradient method (not minimum residual)
+      logical lbcg
+
  
 c-------------------------------------------------------------------
 
@@ -225,6 +238,31 @@ c Do block boundary communications, returns block info icoords...myid.
      $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $     icommcart,mycartid,mpiid,lflag,out,inn)
 
+
+
+c For debugging, if lAdebug flag set, only multiply by A; do not solve
+      if (lAdebug) then
+c        Communicate x on boundaries (needed for psi periodicity)
+         call bbdy(cg_comm,iLs,iuds,x,icg_k,iorig,ndims,idims,lperiod,
+     $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $     icommcart,mycartid,mpiid,lflag,out,inn)
+c        Do matrix multiplication
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
+     $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
+     $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
+     $     ,fpc(myorig1+Li*myorig2)
+     $     ,gpc(myorig2,myorig3,1), out, lAtranspose)
+c        Do the final mpi_gather
+         kc=-1
+         call bbdy(cg_comm,iLs,iuds,res,kc,iorig,ndims,idims,lperiod,
+     $     icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $     icommcart,mycartid,mpiid,lflag,out,inn)
+c        Don't do anything else
+         return
+      endif
+
+
+
 c Initialize right hand side and x, the updated potential
 
          
@@ -250,6 +288,8 @@ c     Formally set the potential at the probe edge to zero, since the
 c     inner boundary condition lies in the right hand side of the equation (b)
                   elseif(i.eq.1)then
                      x(index)=0.
+c                    For debugging, set b to zero as well
+                     b(index)=0.
                   endif
                endif
             enddo
@@ -261,7 +301,8 @@ c Outputs Ax, where A is the cg matrix
       call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
-     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out)
+     $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out,
+     $     .false.)
 
       
 c     Calculate the initial residual r=b-Ax, where x is the potential at
@@ -276,6 +317,8 @@ c     first search direction is the first residual
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
                res(index)=b(index)-res(index)
                if(inn.and.i.eq.1) res(index)=0.
+c              The following line is required for the bcg method
+               resr(index)=res(index)
             enddo
          enddo
       enddo
@@ -289,11 +332,16 @@ c For the next atimesmpi, need res also on the shadow cells
 
       
 
-      call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk ,res(myorig)
+c     Following call used for minimum residual method
+      if (.not. lbcg) then
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk
+     $     ,res(myorig)
      $     ,resr(myorig),u(myorig),apc(myorig1) ,bpc(myorig1)
      $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li *myorig2)
      $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li*myorig2)
-     $     ,gpc(myorig2,myorig3 ,1),out)
+     $     ,gpc(myorig2,myorig3 ,1),out,
+     $     .false.)
+      endif
 
 
       call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
@@ -392,7 +440,9 @@ c     Sum bknum over all the participating nodes
      $        ,z(myorig),u(myorig),apc(myorig1),bpc(myorig1),cpc(myorig1
      $        +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li
      $        *myorig2) ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1
-     $        ) ,out)
+     $        ) ,out,
+     $     .false.)
+
          
          akden=0.
          
@@ -415,13 +465,14 @@ c Sum akden over all the participating nodes
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
 
-         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,pp(myorig
-     $        ),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
-     $        ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
-     $        ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
-     $        ,gpc(myorig2,myorig3,1) ,out)
+c        Implement bcg option by using lbcg as transpose flag
+         call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,
+     $     pp(myorig),zz(myorig),u(myorig),apc(myorig1),bpc(myorig1)
+     $     ,cpc(myorig1+Li*myorig2) ,dpc(myorig1+Li*myorig2)
+     $     ,epc(myorig1+Li*myorig2) ,fpc(myorig1+Li *myorig2)
+     $     ,gpc(myorig2,myorig3,1), out,
+     $     lbcg)
 
-         
          deltamax=0.
          
          do k=2,myside(3)-1
@@ -470,6 +521,12 @@ c the result].
      $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
      $        icommcart,mycartid,mpiid,lflag,out,inn)
 
+c For debugging, also gather b for saving
+      call bbdy(cg_comm,iLs,iuds,b,kc,iorig,ndims,idims,lperiod,
+     $        icoords,iLcoords,myside,myorig,myorig1,myorig2,myorig3,
+     $        icommcart,mycartid,mpiid,lflag,out,inn)
+
+
       cg_del=deltamax
       ierr=icg_k
 
@@ -483,7 +540,8 @@ c      mpiid=myid
 
 c***********************************************************************
 c Outputs res=Ax, where A is the finite volumes stiffness matrix
-      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,out)
+      subroutine atimesmpi(ni,nj,nk,Li,Lj,Lk,x,res,u,a,b,c,d,e,f,g,out,
+     $  ltrnsp)
 
       
 c      integer ni,nj,nk
@@ -492,17 +550,58 @@ c      integer Li,Lj,Lk
       logical out
       real x(Li,Lj,nk),res(Li,Lj,nk),u(Li,Lj,nk)
       real a(ni),b(ni),c(Li,nj),d(Li,nj),e(Li,nj),f(Li,nj),g(Lj,Lk,5)
+      logical ltrnsp
 
 
 c The numbering starts at 1 and ends at n, but 1 and n are the ghost cells
+
+      if (ltrnsp) then
+
+
+c Matrix multiplication
+      do k=2,nk-1
+         do j=2,nj-1
+            do i=2,ni-1
+               res(i,j,k) = b(i+1)*x(i+1,j,k)
+     $           + a(i-1)*x(i-1,j,k)
+     $           + d(i,j+1)*x(i,j+1,k)
+     $           + c(i,j-1)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i,j,k)
+            enddo
+         enddo
+      enddo
+
+c Take care of outer boundary condition
+      if(out) then
+         do k=2,nk-1
+            do j=2,nj-1
+               i=ni-2
+               res(i,j,k) = res(i,j,k)
+     $           + g(j,k,1)*a(i+1)*x(i+1,j,k)
+               i=ni-1
+               res(i,j,k) = res(i,j,k)
+     $           + g(j+1,k,2)*a(i)*x(i,j+1,k)
+     $           + g(j-1,k,3)*a(i)*x(i,j-1,k)
+     $           + g(j,k,5)*a(i)*x(i,j,k)
+            enddo
+         enddo
+      endif
+
+
+
+      else
 
 c Matrix multiplication
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-2
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       enddo
@@ -513,24 +612,35 @@ c Take care of outer boundary condition
       if(out) then
          do k=2,nk-1
             do j=2,nj-1
-               x(i+1,j,k)=g(j,k,1)*x(i-1,j,k)+g(j,k,2)*x(i,j-1,k) +g(j,k
-     $              ,3)*x(i,j+1,k)+0*g(j,k,4)+g(j,k,5) *x(i,j,k)
+               x(i+1,j,k) = g(j,k,1)*x(i-1,j,k)
+     $           + g(j,k,2)*x(i,j-1,k)
+     $           + g(j,k,3)*x(i,j+1,k)
+     $           + 0*g(j,k,4)
+     $           + g(j,k,5)*x(i,j,k)
 
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       else
          do k=2,nk-1
             do j=2,nj-1
-               res(i,j,k)=a(i)*x(i+1,j,k)+b(i)*x(i-1,j,k)+c(i,j) *x(i,j
-     $              +1,k)+d(i,j)*x(i,j-1,k)+e(i,j)*(x(i,j,k+1) +x(i,j,k
-     $              -1))-(f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
+               res(i,j,k) = a(i)*x(i+1,j,k)
+     $           + b(i)*x(i-1,j,k)
+     $           + c(i,j)*x(i,j+1,k)
+     $           + d(i,j)*x(i,j-1,k)
+     $           + e(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (f(i,j)+exp(u(i,j,k)))*x(i ,j,k)
             enddo
          enddo
       endif
       
+      endif
+
       
       end
 
@@ -552,7 +662,7 @@ c Matrix multiplication
       do k=2,nk-1
          do j=2,nj-1
             do i=2,ni-1
-               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))               
+               z(i,j,k)=b(i,j,k)/(-f(i,j)-exp(u(i,j,k)))
             enddo
          enddo
       enddo
@@ -612,6 +722,7 @@ c***********************************************************************
 
 
       include 'piccom.f'
+      include 'errcom.f'
       integer Li,Lj,Lk,ni,nj,nk
       integer myid2
       integer cg_comm
@@ -630,8 +741,17 @@ c***********************************************************************
      $     ,pp(0:nrsize,0:nthsize ,0:npsisize),resr(0:nrsize,0:nthsize
      $     ,0:npsisize),zz(0:nrsize ,0:nthsize,0:npsisize)
 
+c     Variables used for calculating matrix A for debugging
+      real inputvect(0:nrsize,0:nthsize,0:npsisize),
+     $  outputvect(0:nrsize,0:nthsize,0:npsisize)
+      integer n1,n2,n3,j,k,l,m,n,o,jkl,mno
+
+
 c testing arrays
       integer iuds(nd),ifull(nd)
+
+c     Initialize variables for debugging
+      lAdebug = .false.
 
 
       icg_mi=mi
@@ -651,13 +771,91 @@ c testing arrays
   
       call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi, phi(1,0,0)
      $     ,rho(1,0,0),ictl,ierr,myid,idim1,idim2,idim3,apc(1),bpc(1)
-     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1),b,x(1,0,0)
+     $     ,cpc(1,0),dpc(1,0),epc(1,0),fpc(1,0),gpc(0,0,1)
+     $     ,b(1,0,0),x(1,0,0)
      $     ,p(1,0,0) ,res(1,0,0),z(1,0,0) ,pp(1,0,0),resr(1,0,0) ,zz(1,0
-     $     ,0))
+     $     ,0),lbcg)
 
       
       
-c Write x, the temporary potential file, in phi
+c For debugging, save matrix A and its transpose, as well as b and x
+      if (lsavemat .and. stepcount.eq.saveatstep) then
+c        Set flag for cg3dmpi to only multiply by A
+         lAdebug = .true.
+         n1 = ni-1
+         rshieldingsave = n1
+         n2 = nthused
+         n3 = npsiused
+c        First, initialize bsave and xsave just in case
+         do k=0,npsisizesave
+            do j=0,nthsizesave
+               do i=1,nrsizesave-1
+                  bsave(i,j,k) = 0.
+                  xsave(i,j,k) = 0.
+               enddo
+            enddo
+         enddo
+         do k=0,n3
+            do j=0,n2
+               do i=1,n1
+                  bsave(i,j,k) = b(i,j,k)
+                  xsave(i,j,k) = x(i,j,k)
+               enddo
+            enddo
+         enddo
+         do j=1,n3
+            do k=1,n2
+               do l=1,n1
+c                 Pass unit vectors to atimes to build A
+                  inputvect(l,k,j) = 1.
+                  lAtranspose = .false.
+c                 Note that all the arrays passed in the x(*) form
+c                   are offset by one element so that when they are
+c                   passed from within that routine as x(0) it is the
+c                   actual beginning of the array that is passed.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  lAtranspose = .true.
+                  call cg3dmpi(cg_comm,Li,Lj,Lk,ni,nj,nk,bcphi
+     $              ,phi(1,0,0),rho(1,0,0),ictl,ierr,myid,idim1,idim2
+     $              ,idim3,apc(1),bpc(1),cpc(1,0),dpc(1,0),epc(1,0)
+     $              ,fpc(1,0),gpc(0,0,1),b(1,0,0)
+     $              ,inputvect(1,0,0),p(1,0,0),outputvect(1,0,0)
+     $              ,z(1,0,0),pp(1,0,0),resr(1,0,0),zz(1,0,0),lbcg)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
+
+c Write x, the temporary potential file, to phi, and find maxchange
       if(myid2.eq.0) then
          do k=1,npsiused
             do j=1,nthused
@@ -667,6 +865,7 @@ c Write x, the temporary potential file, in phi
             enddo
          enddo
       endif
+
 
       k=icg_k
       

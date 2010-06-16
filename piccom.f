@@ -234,7 +234,10 @@ c Poisson coefficients for iterative solution, etc.
       real epc(0:nrsize,0:nthsize)
       real fpc(0:nrsize,0:nthsize)
       real gpc(0:nthsize,0:npsisize,1:5)
+c     Flag indicating to use biconjugate gradient method (not min. res.)
+      logical lbcg
       common /poisson/debyelen,vprobe,Ezext,apc,bpc,cpc,dpc,fpc,epc,gpc
+     $  ,lbcg
 c*********************************************************************
 c Smoothing steps
       integer nstepsave,nsamax,diagsamp

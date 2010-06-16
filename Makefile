@@ -103,24 +103,24 @@ OBJMPIHDF := $(OBJMPI) \
           outputhdf.o
 
 # Default target is serial sceptic3D without HDF support
-sceptic3D : sceptic3D.F piccom.f $(OBJ) ./accis/libaccisX.a
+sceptic3D : sceptic3D.F piccom.f errcom.f $(OBJ) ./accis/libaccisX.a
 	$(G77) $(OPTCOMP) -o sceptic3D sceptic3D.F $(OBJ) $(LIB)
 
 # sceptic3D with HDF
-sceptic3Dhdf : sceptic3D.F piccom.f $(OBJHDF) ./accis/libaccisX.a
+sceptic3Dhdf : sceptic3D.F piccom.f errcom.f $(OBJHDF) ./accis/libaccisX.a
 	$(G77) $(OPTCOMPHDF) -o sceptic3Dhdf sceptic3D.F $(OBJHDF) $(LIBHDF)
 
 # sceptic3D with MPI
-sceptic3Dmpi : sceptic3D.F piccom.f piccomcg.f $(OBJMPI) ./accis/libaccisX.a
+sceptic3Dmpi : sceptic3D.F piccom.f errcom.f piccomcg.f $(OBJMPI) ./accis/libaccisX.a
 	$(G77) $(OPTCOMPMPI) -o sceptic3Dmpi sceptic3D.F $(OBJMPI) $(LIB)
 
 # sceptic3D with MPI & HDF
-sceptic3Dmpihdf : sceptic3D.F piccom.f piccomcg.f $(OBJMPIHDF) ./accis/libaccisX.a
+sceptic3Dmpihdf : sceptic3D.F piccom.f errcom.f piccomcg.f $(OBJMPIHDF) ./accis/libaccisX.a
 	$(G77) $(OPTCOMPMPIHDF) -o sceptic3Dmpihdf sceptic3D.F $(OBJMPIHDF) $(LIBHDF)
 
 
 # HDF related rules
-outputhdf.o : outputhdf.f piccom.f colncom.f $(DIRHDF)/lib/libhdf5.a
+outputhdf.o : outputhdf.f piccom.f errcom.f colncom.f $(DIRHDF)/lib/libhdf5.a
 	$(G90) -c $(OPTCOMPHDF) outputhdf.f
 
 # Though more than one hdf library used, choose one as trigger
@@ -147,15 +147,15 @@ coulflux.o : tools/coulflux.f
 fvinjecttest : fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o fvcom.f
 	$(G77)  -o fvinjecttest $(OPTCMOP) fvinjecttest.F fvinject.o reinject.o initiate.o advancing.o chargefield.o randf.o  $(LIB)
 
-fvinject.o : fvinject.f fvcom.f piccom.f
+fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -c $(OPTCOMP) fvinject.f
 
 
 # Pattern rules
-%.o : %.f piccom.f fvcom.f;
+%.o : %.f piccom.f errcom.f fvcom.f;
 	$(G77) -c $(OPTCOMP) $*.f
 
-%.o : %.F piccom.f;
+%.o : %.F piccom.f errcom.f;
 	$(G77) -c $(OPTCOMP) $*.F
 
 % : %.f

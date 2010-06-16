@@ -29,12 +29,19 @@ c******************************************************************
       subroutine shielding3D(dt,n1)
 
       include 'piccom.f'
+      include 'errcom.f'
       real dt,dconverge
       integer maxits
       integer n1
       real b(nrsize-1,0:nthsize,0:npsisize)
      $     ,x(nrsize-1,0:nthsize,0:npsisize)
       integer kk1,kk2
+
+c     Variables used for calculating matrix A for debugging
+      real inputvect(nrsize-1,0:nthsize,0:npsisize),
+     $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
+      integer n2,n3,j,k,l,m,n,o,jkl,mno
+
 
       maxits=2*(nrused*nthused*npsiused)**0.333
       dconverge=1.e-5
@@ -72,6 +79,51 @@ c already been calculated in innerbc.f
 
 
       call cg3D(n1,nthused,npsiused,b,x,dconverge,iter,maxits)
+
+c For debugging, save matrix A and its transpose
+      if (lsavemat .and. stepcount.eq.saveatstep) then
+         rshieldingsave = n1
+         n2 = nthused
+         n3 = npsiused
+         do j=1,n3
+            do k=1,n2
+               do l=1,n1
+                  bsave(l,k,j) = b(l,k,j)
+                  xsave(l,k,j) = x(l,k,j)
+c                 Pass unit vectors to atimes to build A
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect,
+     $              .false.)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Asave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+c                 Pass unit vectors to atimes to build A'
+                  inputvect(l,k,j) = 1.
+                  call atimes(n1,n2,n3,inputvect,outputvect,
+     $              .true.)
+                  do m=1,n3
+                     do n=1,n2
+                        do o=1,n1
+                           Atsave(o,n,m,l,k,j) = outputvect(o,n,m)
+c                          atimes may change input vector, so reset
+                           inputvect(o,n,m) = 0.
+c                          reset output to to be safe
+                           outputvect(o,n,m) = 0.
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
 
 
       do k=1,npsiused
@@ -152,8 +204,11 @@ c     n1,n2,n3. A is the stiffness matrix of the Poisson solver, and x
 c     is the potential. Because A is symmetric but not necessarily
 c     definite positive, we use the minimum residual variant of the
 c     algorithm
+c     Actually, A is not exactly symmetric (especially for coarse grids)
+c       so use biconjugate gradient method from Press.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       integer itmax,iter
       real eps,delta,deltamax
@@ -177,20 +232,26 @@ c     previous time-step. With the conjugate gradient method, the first
 c     search direction is the first residual
 
 
-      call atimes(n1,n2,n3,x,res)
+      call atimes(n1,n2,n3,x,res,.false.)
       
       do k=1,n3
          do j=1,n2
             do i=2,n1
                res(i,j,k)=b(i,j,k)-res(i,j,k)
+c              The following line is required for the bcg method
+               resr(i,j,k)=res(i,j,k)
             enddo
 c     Inner bc lies in the rhs of poisson's equation (b)
             res(1,j,k)=0.
+c           For debugging, also set resr to zero
+            resr(1,j,k)=0.
          enddo
       enddo
 
-      call atimes(n1,n2,n3,res,resr)
-      
+c     Following line used for minimum residual method
+      if (.not. lbcg) then
+         call atimes(n1,n2,n3,res,resr,.false.)
+      endif
 
       call asolve(n1,n2,n3,res,z,error0)
 
@@ -239,7 +300,7 @@ c     Main loop
          endif
          
          bkden=bknum
-         call atimes(n1,n2,n3,p,z)
+         call atimes(n1,n2,n3,p,z,.false.)
          akden=0.
          do k=1,n3
             do j=1,n2
@@ -249,7 +310,8 @@ c     Main loop
             enddo
          enddo
          ak=bknum/akden
-         call atimes(n1,n2,n3,pp,zz)
+c        Give bcg option by using lbcg as transpose flag
+         call atimes(n1,n2,n3,pp,zz,lbcg)
          
          deltamax=0.
          do k=1,n3
@@ -289,6 +351,7 @@ c     Preconditioning subroutine. if Atilde is the preconditioning
 c     matrix, returns z=Atilde^-1*b.
 
       include 'piccom.f'
+      include 'errcom.f'
 
       real b(nrsize-1,0:nthsize,0:npsisize), z(nrsize-1,0:nthsize
      $     ,0:npsisize)
@@ -322,15 +385,114 @@ c     matrix, returns z=Atilde^-1*b.
 
 c **************************************
 
-      subroutine atimes(n1,n2,n3,x,res)
+      subroutine atimes(n1,n2,n3,x,res,ltrnsp)
 
       include 'piccom.f'
-c Outputs res=Ax, where A is the finite volumes stiffness matrix     
+      include 'errcom.f'
+c Outputs res=Ax or A'x, where A is the finite volumes stiffness matrix
       real x(nrsize-1,0:nthsize,0:npsisize), res(nrsize-1
      $     ,0:nthsize ,0:npsisize)
       integer n1,n2,n3
+      logical ltrnsp
 
-c Bulk iteration
+
+      if (ltrnsp) then
+
+
+c Elements of A'
+c     Note that implementing the boundary condition in the transpose
+c       matrix is slighly trickier since the affected elements now
+c       are are spread across i=n1 and i=n1-1, and in j
+
+      do k=2,n3-1
+         do j=1,n2
+c           Strictly speaking we should be doing i=1 since the
+c             transpose will have a non-zero element, but since
+c             x(i=1)=0, that element doesn't affect the solution
+            do i=2,n1-2
+               res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $           + apc(i-1)*x(i-1,j,k)
+     $           + dpc(i,j+1)*x(i,j+1,k)
+     $           + cpc(i,j-1)*x(i,j-1,k)
+     $           + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $           - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+            enddo
+            i=n1-1
+            res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+            i=n1
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $        + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $        - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $        *x(i,j,k)
+         enddo
+      enddo
+
+      k=1
+      do j=1,n2
+         do i=2,n1-2
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         enddo
+         i=n1-1
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + dpc(i,j+1)*x(i,j+1,k)
+     $     + cpc(i,j-1)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         i=n1
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $     *x(i,j,k)
+      enddo
+      k=n3
+      do j=1,n2
+         do i=2,n1-2
+            res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $        + apc(i-1)*x(i-1,j,k)
+     $        + dpc(i,j+1)*x(i,j+1,k)
+     $        + cpc(i,j-1)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         enddo
+         i=n1-1
+         res(i,j,k) = (bpc(i+1) + gpc(j,k,1)*apc(i+1))*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + dpc(i,j+1)*x(i,j+1,k)
+     $     + cpc(i,j-1)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+         i=n1
+         res(i,j,k) = bpc(i+1)*x(i+1,j,k)
+     $     + apc(i-1)*x(i-1,j,k)
+     $     + (dpc(i,j+1) + gpc(j+1,k,2)*apc(i))*x(i,j+1,k)
+     $     + (cpc(i,j-1) + gpc(j-1,k,3)*apc(i))*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $     - (fpc(i,j) + exp(phi(i,j,k)) - gpc(j,k,5)*apc(i))
+     $     *x(i,j,k)
+      enddo
+
+
+
+      else
+
+c Bulk iteration for A
       
       do k=2,n3-1
          do j=1,n2
@@ -360,36 +522,60 @@ c Bulk iteration
          enddo
       enddo
 
-c Outer boundary iteration
+
+c Outer boundary iteration for A
 
       i=n1
       do j=1,n2
          do k=2,n3-1
 c The solution x one node further the boundary
-            x(i+1,j,k)=gpc(j,k,1)*x(i-1,j,k)+gpc(j,k,2)*x(i,j-1,k)+gpc(j
-     $           ,k,3)*x(i,j+1,k)+0*gpc(j,k,4)+gpc(j,k,5)*x(i,j,k)
-            
-            res(i,j,k)=apc(i)*x(i+1,j,k)+bpc(i)*x(i-1,j,k)+cpc(i,j) *x(i
-     $           ,j+1,k)+dpc(i,j)*x(i,j-1,k)+epc(i,j)*(x(i,j,k+1) +x(i,j
-     $           ,k-1))-(fpc(i,j)+exp(phi(i,j,k)))*x(i ,j,k)
+            x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
+     $        + gpc(j,k,2)*x(i,j-1,k)
+     $        + gpc(j,k,3)*x(i,j+1,k)
+     $        + 0*gpc(j,k,4)
+     $        + gpc(j,k,5)*x(i,j,k)
+
+            res(i,j,k) = apc(i)*x(i+1,j,k)
+     $        + bpc(i)*x(i-1,j,k)
+     $        + cpc(i,j)*x(i,j+1,k)
+     $        + dpc(i,j)*x(i,j-1,k)
+     $        + epc(i,j)*(x(i,j,k+1)+x(i,j,k-1))
+     $        - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
          enddo
+
          k=1
-         x(i+1,j,k)=gpc(j,k,1)*x(i-1,j,k)+gpc(j,k,2)*x(i,j-1,k)+gpc(j ,k
-     $        ,3)*x(i,j+1,k)+0*gpc(j,k,4)+gpc(j,k,5)*x(i,j,k)
-         
-         res(i,j,k)=apc(i)*x(i+1,j,k)+bpc(i)*x(i-1,j,k)+cpc(i,j) *x(i,j
-     $        +1,k)+dpc(i,j)*x(i,j-1,k)+epc(i,j)*(x(i,j,k+1) +x(i,j,n3))
-     $        -(fpc(i,j)+exp(phi(i,j,k)))*x(i ,j,k)
-         
+         x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
+     $     + gpc(j,k,2)*x(i,j-1,k)
+     $     + gpc(j,k,3)*x(i,j+1,k)
+     $     + 0*gpc(j,k,4)
+     $     + gpc(j,k,5)*x(i,j,k)
+
+         res(i,j,k) = apc(i)*x(i+1,j,k)
+     $     + bpc(i)*x(i-1,j,k)
+     $     + cpc(i,j)*x(i,j+1,k)
+     $     + dpc(i,j)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,k+1)+x(i,j,n3))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+
          k=n3
-         x(i+1,j,k)=gpc(j,k,1)*x(i-1,j,k)+gpc(j,k,2)*x(i,j-1,k)+gpc(j ,k
-     $        ,3)*x(i,j+1,k)+0*gpc(j,k,4)+gpc(j,k,5)*x(i,j,k)
-         
-         res(i,j,k)=apc(i)*x(i+1,j,k)+bpc(i)*x(i-1,j,k)+cpc(i,j) *x(i,j
-     $        +1,k)+dpc(i,j)*x(i,j-1,k)+epc(i,j)*(x(i,j,1) +x(i,j,k-1))
-     $        -(fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
-         
+         x(i+1,j,k) = gpc(j,k,1)*x(i-1,j,k)
+     $     + gpc(j,k,2)*x(i,j-1,k)
+     $     + gpc(j,k,3)*x(i,j+1,k)
+     $     + 0*gpc(j,k,4)
+     $     + gpc(j,k,5)*x(i,j,k)
+
+         res(i,j,k) = apc(i)*x(i+1,j,k)
+     $     + bpc(i)*x(i-1,j,k)
+     $     + cpc(i,j)*x(i,j+1,k)
+     $     + dpc(i,j)*x(i,j-1,k)
+     $     + epc(i,j)*(x(i,j,1)+x(i,j,k-1))
+     $     - (fpc(i,j)+exp(phi(i,j,k)))*x(i,j,k)
+
       enddo
+
+      endif
+
+
 
 
       end

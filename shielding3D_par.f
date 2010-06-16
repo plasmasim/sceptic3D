@@ -29,6 +29,7 @@ c******************************************************************
       subroutine shielding3D_par(dt,n1,cg_comm,myid2)
 
       include 'piccom.f'
+      include 'errcom.f'
 c cg_comm is the subset of MPI_COMM_WORLD communicator used for the
 c bloc conjugate gradient
       integer cg_comm,myid2

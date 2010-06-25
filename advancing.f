@@ -186,8 +186,8 @@ c Collision at the end of cdt step.
             endif
             if(.not.dt.lt.1000.)then
 c     Error trap 
-               write(*,*)'dt error: dt, cdt, dts, remdt:',
-     $              dt, cdt, dts, remdt
+               write(*,*)'dt error: dtin, dt, cdt, dts, remdt:',
+     $              dtin, dt, cdt, dts, remdt
                write(*,*)'isubcycle, r(nrfull), rp:',
      $              isubcycle, r(nrfull), rp
 c              Trigger go to output

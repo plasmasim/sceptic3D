@@ -188,7 +188,7 @@ c Collision at the end of cdt step.
 c     Error trap 
                write(*,*)'dt error: dt, cdt, dts, remdt:',
      $              dt, cdt, dts, remdt
-               write(*,*)'isubcycle, r(nrfull), rp:'
+               write(*,*)'isubcycle, r(nrfull), rp:',
      $              isubcycle, r(nrfull), rp
 c              Trigger go to output
                lgotooutput = .true.

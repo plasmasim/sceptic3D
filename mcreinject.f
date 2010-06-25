@@ -247,7 +247,11 @@ c           Initial perpendicular velocity
 c                 If no collisions, the drift is specified
                   epardv(j)=magdir(j)*dot(drvect(1),magdir(1),mcrndim)
                endif
-               vperpx(j) = vperp(j)/vperpmag
+               if (vperpmag .gt. 0.) then
+                  vperpx(j) = vperp(j)/vperpmag
+               else
+                  vperpx(j) = 0.
+               endif
             enddo
             call cross(magdir(1),vperpx(1),vperpy(1))
             rot = Bz*colldt

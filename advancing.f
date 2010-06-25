@@ -126,6 +126,8 @@ c     Here we do need half quantities.
             hf=88.
             call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,sp,cp,rp
      $           ,zetap,ih,hf)
+c           If lgotooutput tripped, skip to end
+            if (lgotooutput) goto 401
 
             
 c .................... Subcycle Loop .................
@@ -198,6 +200,8 @@ c Except for the first time, find new position.
                
                call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,
      $              sp,cp,rp,zetap,ih,hf)
+c              If lgotooutput tripped, skip to end
+               if (lgotooutput) goto 401
             endif            
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
@@ -570,6 +574,8 @@ c     the new particle starting just at the edge. Get new position:
                hf=77.
                call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,
      $              sp,cp,rp,zetap,ih,hf)
+c              If lgotooutput tripped, skip to end
+               if (lgotooutput) goto 401
 c     Set the external step length, (isubcycle=1).
                dts=dtin
 c     The ion is reinjected with v and x synchronized. We set dtprec to
@@ -741,6 +747,7 @@ c Testing
 c         stop
 c        Trigger go to output
          lgotooutput = .true.
+         goto 404
       endif
 
 C Find the cell and cell fraction we are at.
@@ -762,6 +769,7 @@ c
 c         stop
 c        Trigger go to output
          lgotooutput = .true.
+         goto 404
       endif
 
 c psi sin/cos
@@ -800,6 +808,7 @@ c theta sin/cos
 c         stop
 c        Trigger go to output
          lgotooutput = .true.
+         goto 404
       endif
       ithl=interpth(ct,thf)
 

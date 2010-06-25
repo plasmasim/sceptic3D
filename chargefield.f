@@ -96,6 +96,9 @@ c Use fast ptomesh, half-quantities not needed.
            
             call ptomesh(i,irl,rf,ithl,thf,ipl,pf,st,ct,sp,cp,rp
      $           ,zetap,ih,hf)
+c           If lgotooutput tripped, skip to end
+            if (lgotooutput) goto 404
+
             if(rf.lt.0..or.rf.gt.1.)then
                rp=sqrt(xp(1,i)**2+xp(2,i)**2+xp(3,i)**2)
                write(*,*)'Outside mesh, rf error in chargetomesh',
@@ -112,6 +115,7 @@ c      do iw=1,nrused
 c         write(*,*) iw
 c         write(*,*) ((vrsum(iw,jw,kw),jw=1,nthused),kw=1 ,npsiused)
 c      enddo
+ 404  continue
       end
 c***********************************************************************
 c Accumulate particle charge into rho mesh and other diagnostics.

@@ -97,7 +97,10 @@ c Use fast ptomesh, half-quantities not needed.
             call ptomesh(i,irl,rf,ithl,thf,ipl,pf,st,ct,sp,cp,rp
      $           ,zetap,ih,hf)
 c           If lgotooutput tripped, skip to end
-            if (lgotooutput) goto 404
+            if (lgotooutput) then
+               write (*,*) 'lgotooutput tripped in chargetomesh.'
+               goto 404
+            endif
 
             if(rf.lt.0..or.rf.gt.1.)then
                rp=sqrt(xp(1,i)**2+xp(2,i)**2+xp(3,i)**2)

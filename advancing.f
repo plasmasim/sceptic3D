@@ -127,7 +127,10 @@ c     Here we do need half quantities.
             call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,sp,cp,rp
      $           ,zetap,ih,hf)
 c           If lgotooutput tripped, skip to end
-            if (lgotooutput) goto 401
+            if (lgotooutput) then
+               write (*,*) 'lgotooutput tripped in padvnc.'
+               goto 401
+            endif
 
             
 c .................... Subcycle Loop .................
@@ -206,12 +209,18 @@ c Except for the first time, find new position.
                call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,
      $              sp,cp,rp,zetap,ih,hf)
 c              If lgotooutput tripped, skip to end
-               if (lgotooutput) goto 401
+               if (lgotooutput) then
+                  write (*,*) 'lgotooutput tripped in padvnc.'
+                  goto 401
+               endif
             endif            
             call getaccel(i,accel,il,rf,ith,tf,ipl,pf,st,ct,
      $           sp,cp,rp,zetap,ih,hf)
 c           If lgotooutput tripped, skip to end
-            if (lgotooutput) goto 401
+            if (lgotooutput) then
+               write (*,*) 'lgotooutput tripped in padvnc.'
+               goto 401
+            endif
 
 
 c For acceleration, when dt is changing, use the average of prior and
@@ -580,7 +589,10 @@ c     the new particle starting just at the edge. Get new position:
                call ptomesh(i,il,rf,ith,tf,ipl,pf,st,ct,
      $              sp,cp,rp,zetap,ih,hf)
 c              If lgotooutput tripped, skip to end
-               if (lgotooutput) goto 401
+               if (lgotooutput) then
+                  write (*,*) 'lgotooutput tripped in padvnc.'
+                  goto 401
+               endif
 c     Set the external step length, (isubcycle=1).
                dts=dtin
 c     The ion is reinjected with v and x synchronized. We set dtprec to

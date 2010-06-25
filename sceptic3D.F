@@ -622,7 +622,7 @@ c        bdtnow=max(1.,(bdt-1.)*(maccel-i+2)/(maccel+1.)+1.)
             bdtnow=max(1.,bdt*(maccel-i)/(maccel-1.))
          else
             bdtnow = 1.
-         end
+         endif
          dt=bdtnow*dtf
 c         write(*,*) colnwt,Eneutral
 c         write(*,*)'bdtnow,btd,maccel,dt,dtf=',bdtnow,bdt,maccel,dt,dtf

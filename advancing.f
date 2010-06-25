@@ -188,6 +188,9 @@ c Collision at the end of cdt step.
 c     Error trap 
                write(*,*)'dt error: dt, cdt, dts, remdt',
      $              dt, cdt, dts, remdt
+c              Trigger go to output
+               lgotooutput = .true.
+               goto 401
             endif
             remdt=remdt-dt
             

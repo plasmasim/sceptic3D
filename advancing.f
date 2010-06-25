@@ -817,6 +817,7 @@ c "While not"
 c         stop
 c        Trigger go to output
          lgotooutput = .true.
+         goto 404
       else
          irl=irl+1
          rf=(rp-r(irl))/(r(irl+1)-r(irl))
@@ -845,6 +846,7 @@ c     $        .or. ih.eq.NRFULL)then
      $           zetap,zeta(ih),zeta(ih+1),hf
          endif
       endif
+ 404  continue
       end
 
 c****************************************************************** 

@@ -1023,6 +1023,9 @@ c Check if any node tripped lgotooutput, and if so, leave do loop
  50   continue
 c End of particle stepping section.
 
+c     If lgotooutput, skip to output
+      if (lgotooutput) goto 509
+
       itotsteps=maxsteps
       if(myid.eq.0)then
 c         write(*,'(/,a)')'Exhausted maxsteps'
@@ -1055,6 +1058,7 @@ c Average various fluxes and fields:
   
       call sumreduce()
 
+ 509  continue
       if(myid.eq.0)then
 c Write the output files.
          call output(dt,i-1,fave,icolntype,colnwt)

@@ -864,6 +864,11 @@ c Write x, the temporary potential file, to phi, and find maxchange
                do i=2,ni-1
                   maxdphi=max(maxdphi,abs(phi(i,j,k)-x(i,j,k)))
                   phi(i,j,k)=x(i,j,k)
+c                 For debugging, check for NaN (potential should be small)
+                  if (.not.(phi(i,j,k) .lt. 1e6)) then
+                     lgotooutput = .true.
+                     write (*,*) 'Possible NaN in fcalc3Dpar.'
+                  endif
                enddo
             enddo
          enddo

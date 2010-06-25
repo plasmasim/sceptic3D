@@ -162,6 +162,7 @@ c     Normalize total flux
 c       Note that the flux is now calculated at each node,
 c       but rhoinf is calculated by node 0 and then broadcast.
 c       Could average flux from each node before calculating rhoinf.
+c     This is not really per unit area, so flux may not be the best name for this
       mcrtotflux = mcrtotflux/mcrnpart
       mcrtotflux = mcrtotflux*r(nrused)**2
 

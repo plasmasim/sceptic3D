@@ -551,6 +551,8 @@ c Initialize velocity diagnostics
 
 c Read in the previous particle distribution and averages.
       if(readpart) call partrd(success)
+c     For debugging, notify if read particles
+      if(success) write(*,*)'Read particles.'
 c Or Initialize (load) particles
       
 

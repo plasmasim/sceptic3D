@@ -618,7 +618,11 @@ c         write(*,*)mod(i-1,ipstep),i,ipstep
 c Acceleration for first 1/3rd of steps.
 c The following two expressions are sensibly similar
 c        bdtnow=max(1.,(bdt-1.)*(maccel-i+2)/(maccel+1.)+1.)
-         bdtnow=max(1.,bdt*(maccel-i)/(maccel-1.))
+         if (maccel .ne. 1.) then
+            bdtnow=max(1.,bdt*(maccel-i)/(maccel-1.))
+         else
+            bdtnow = 1.
+         end
          dt=bdtnow*dtf
 c         write(*,*) colnwt,Eneutral
 c         write(*,*)'bdtnow,btd,maccel,dt,dtf=',bdtnow,bdt,maccel,dt,dtf

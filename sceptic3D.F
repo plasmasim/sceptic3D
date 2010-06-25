@@ -657,6 +657,15 @@ c Collect the partial sums of moments of distribution.
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 #endif
       
+c Check if any node tripped lgotooutput, and if so, leave do loop
+#ifdef MPI
+         ltmp = lgotooutput
+         call MPI_ALLREDUCE(lgotooutput,ltmp,1,MPI_INTEGER,MPI_LOR
+     $        ,MPI_COMM_WORLD,ierr)
+         lgotooutput = ltmp
+#endif
+         if (lgotooutput) goto 50
+
          call sumreduce()
          call aveupstep()
 
@@ -949,6 +958,15 @@ c     default we also evaluate at the probe surface
             ymom(i,lorentz,2)=fby
           
          endif
+
+c Check if any node tripped lgotooutput, and if so, leave do loop
+#ifdef MPI
+         ltmp = lgotooutput
+         call MPI_ALLREDUCE(lgotooutput,ltmp,1,MPI_INTEGER,MPI_LOR
+     $        ,MPI_COMM_WORLD,ierr)
+         lgotooutput = ltmp
+#endif
+         if (lgotooutput) goto 50
 
 
 c     Main particle advance, including collisions.

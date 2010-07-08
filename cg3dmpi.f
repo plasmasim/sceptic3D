@@ -508,6 +508,19 @@ c         endif
 
 c        Test for deltamax NaN
          if (.not.(deltamax .lt. 1e6)) then
+c           Restart proceedure prevented NaN, but potential still garbage,
+c             so just return x=u
+            do k=1,myside(3)
+               do j=1,myside(2)
+                  do i=1,myside(1)
+                     index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
+                     x(index) = u(index)
+                     if (out .and. i.eq.myside(1)) x(index)=0.
+                     if (inn .and. i.eq.1) x(index)=0.
+                  enddo
+               enddo
+            enddo
+            goto 11
             if (lrestart) then
 c              Restart failed, so exit loop
                goto 11

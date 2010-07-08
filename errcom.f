@@ -7,7 +7,7 @@ c     Flag indicating whether to save potential for nstepsssave steps
 c     Max grid size and steps to save
       integer nrsizesave,nthsizesave,npsisizesave,nstepssave
       parameter (nrsizesave=61,nthsizesave=11,npsisizesave=11
-     $  ,nstepssave=2001)
+     $  ,nstepssave=3001)
 cc     Make small unless debugging
 c      parameter (nrsizesave=6,nthsizesave=6,npsisizesave=6
 c     $  ,nstepssave=21)

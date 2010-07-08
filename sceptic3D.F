@@ -92,7 +92,7 @@ c Variables for debugging
       lsavephi = .false.
       lfirsttime = .true.
       stepcount = 0
-      saveatstep = 1
+      saveatstep = 2515
 c     Use biconjugate gradient method as default solver
       lbcg=.true.
 

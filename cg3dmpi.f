@@ -154,6 +154,9 @@ c     number of iterations and the convergence size.
       real delta,deltamax
       logical lconverged
 
+c     Variables for restarting in case of NaN
+      logical lrestart
+      integer miorig
 
 c     icg_prec is the number of iterations at the previous
 c     timestep. Necessary for an estimation of when to start checking
@@ -261,13 +264,16 @@ c        Don't do anything else
          return
       endif
 
+c     To restart in case of NaN, save initial max iter num.
+      miorig = icg_mi
+      lrestart = .false.
 
 
 c Initialize right hand side and x, the updated potential
 
          
 
-      do k=1,myside(3)
+ 2    do k=1,myside(3)
          do j=1,myside(2)
             do i=1,myside(1)
                index=myorig+(i-1)*iLs(1)+(j-1)*iLs(2)+(k-1)*iLs(3)
@@ -298,7 +304,7 @@ c                    For debugging, set b to zero as well
 
 
 c Outputs Ax, where A is the cg matrix
-      call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
+ 3    call atimesmpi(myside(1),myside(2),myside(3),Li,Lj,Lk,x(myorig)
      $     ,res(myorig),u(myorig),apc(myorig1),bpc(myorig1) ,cpc(myorig1
      $     +Li*myorig2) ,dpc(myorig1+Li*myorig2),epc(myorig1+Li*myorig2)
      $     ,fpc(myorig1+Li *myorig2) ,gpc(myorig2,myorig3,1),out,
@@ -500,6 +506,26 @@ c         endif
 
          if(lconverged.and.icg_k.ge.1)goto 11
 
+c        Test for deltamax NaN
+         if (.not.(deltamax .lt. 1e6)) then
+            if (lrestart) then
+c              Restart failed, so exit loop
+               goto 11
+            else
+c              Re-do all but last step that succeeded (current step failed)
+               icg_mi = icg_k - 2
+               lrestart = .true.
+c              Need to reset x since starting all the way over
+               goto 2
+            endif
+         endif
+c        If a limited number of steps have been redone, and currently on
+c          last of those steps, restart and do the remaning steps
+         if (lrestart .and. icg_k .eq. icg_mi) then
+            icg_mi = miorig
+c           Don't reset x
+            goto 3
+         endif
 
          call asolvempi(myside(1),myside(2),myside(3),Li,Lj,Lk
      $        ,res(myorig),z(myorig),u(myorig),apc(myorig1) ,fpc(myorig1

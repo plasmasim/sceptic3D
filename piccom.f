@@ -76,11 +76,18 @@ c Direction of magnetic field
       real magdir(3)
 c Relative drift perpendicular to B (ExB drift)
       real ecbdrift(3)
+
+c The averaged (over last fraction of total steps) potential
+      real phiavg(0:nrsize,0:nthsize,0:npsisize)
+c Whether to calculate average phi at end of last step (phiavg only valid at end of last step)
+      logical lphiavg
+
       common /piccom/xp,npart,vzinit,dtprec,phi,rho,rhoDiag,cerr,bdyfc
      $     ,Ti,vd,cd,cB,diags,ninjcomp,lplot,ldist,linsulate,lfloat
      $     ,lat0,lap0 ,localinj,lfixedn,myid,numprocs,rmtoz,ipf,iocprev
      $     ,Bz,lsubcycle,verlet,collcic,phiaxis
      $     ,Bvect,drvect,magdir,ecbdrift,lfulloutput
+     $     ,phiavg,lphiavg
 
 
 c *******************************************************************

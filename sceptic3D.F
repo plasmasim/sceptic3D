@@ -64,6 +64,9 @@ c     Variables used for looping over CG for nonlin Poisson solver
       logical nonlin
       data nonlin/.false./
 
+c     By default do not calculate average potential
+      data lphiavg/.false./
+
 c     Variables used for calculating matrix A for debugging
       real inputvect(nrsize-1,0:nthsize,0:npsisize),
      $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
@@ -887,6 +890,42 @@ c     Averein is always broadcasted from 0 since it is calculated
 c     in diags, called only by myid=0, not myid2=0
          call MPI_BCAST(averein,1, MPI_REAL,0,MPI_COMM_WORLD,ierr)
 #endif
+
+c        Update average potential if needed
+         if (lphiavg) then
+            if (i .eq. 1) then
+c              Initialize phiavg array
+               do j=0,npsisize
+                  do k=0,nthsize
+                     do l=0,nrsize
+                        phiavg(l,k,j) = 0.
+                     enddo
+                  enddo
+               enddo
+            elseif (i .ge. m2) then
+c              Add present potential (note that phiavg only actually
+c                holds average potential at end of last step)
+               do j=0,npsi
+                  do k=0,nth
+                     do l=0,nr
+                        phiavg(l,k,j) = phiavg(l,k,j) + phi(l,k,j)
+                     enddo
+                  enddo
+               enddo
+            endif
+
+            if (i .eq. maxsteps) then
+c              Compute aveage potential
+               do j=0,npsi
+                  do k=0,nth
+                     do l=0,nr
+                        phiavg(l,k,j) = phiavg(l,k,j)/(maxsteps-m2+1)
+                     enddo
+                  enddo
+               enddo
+            endif
+         endif
+
 
 c        For debugging: Save phi for first nstepssave if small grid
          if (lsavephi .and.

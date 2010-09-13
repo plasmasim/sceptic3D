@@ -258,6 +258,10 @@ c     Single value variables
       call writehdfrealmat(group_id,dsetname,
      $ rmtoz,storage_dims,data_dims,rank)
 
+      dsetname = 'lphiavg'
+      call writehdfintmat(group_id,dsetname,
+     $ lphiavg,storage_dims,data_dims,rank)
+
 c     Variable arrays
       dsetname = 'xp'
       rank = 2
@@ -299,6 +303,17 @@ c     Variable arrays
       storage_dims(3) = npsisize+1
       call writehdfrealmat(group_id,dsetname,
      $  phi,storage_dims,data_dims,rank)
+
+      dsetname = 'phiavg'
+      rank = 3
+      data_dims(1) = nr+1
+      data_dims(2) = nth+1
+      data_dims(3) = npsi+1
+      storage_dims(1) = nrsize+1
+      storage_dims(2) = nthsize+1
+      storage_dims(3) = npsisize+1
+      call writehdfrealmat(group_id,dsetname,
+     $  phiavg,storage_dims,data_dims,rank)
 
       dsetname = 'phiaxis'
       rank = 2

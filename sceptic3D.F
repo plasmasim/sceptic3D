@@ -69,6 +69,9 @@ c     Variables used for calculating matrix A for debugging
      $  outputvect(nrsize-1,0:nthsize ,0:npsisize)
       integer n1,n2,n3,m,n,o
 
+c     Sort particles every nsort steps
+      integer nsort
+      logical lsort
 
 c Parallel processing MPI options.
 #ifdef MPI
@@ -183,7 +186,9 @@ c     drifting Maxwellian reinjection.
 c Signal that fvcom is not initialized. After initialization it is .ne.0
       qthfv(nthfvsize)=0.
 
-      
+c Don't sort particles by default
+      lsort = .false.
+      nsort = 0
 
 c Deal with arguments
       if(iargc().eq.0) goto 51
@@ -252,8 +257,10 @@ c        For debugging, give option to save A and/or phi
          elseif(string(1:9) .eq. '--savephi') then
             lsavephi=.true.
          endif
-         
-         if(string(1:2) .eq. '-s') then
+         if(string(1:5) .eq. '-sort') then
+            read(string(6:),*)nsort
+            lsort = .true.
+         elseif(string(1:2) .eq. '-s') then
             read(string(3:),*)maxsteps
          endif
          if(string(1:2) .eq. '-b') read(string(3:),*)bdyfc
@@ -977,6 +984,10 @@ c     Main particle advance, including collisions.
          
          call padvnc(dt,icolntype,colnwt,i,maccel,ierad)
 
+c     Sort particles every few steps
+         if (lsort .and. mod(i,nsort).eq.1) then
+            call quicksort6dfloats(xp,npartmax)
+         endif
 
 c     Reduce back the flux and distribution data from the particle advance.
          call partreduce(i)
@@ -1150,6 +1161,7 @@ c Help section
       write(*,*)' -ver Old verlet integrator.',  
      $     '-bohm Impose Bohm condition when LDe=0.'
       write(*,*)' --fulloutput do not suppress output of large arrays.'
+      write(*,*)' -sortnnn sort prticles every n steps'
 
       end
 

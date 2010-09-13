@@ -83,7 +83,8 @@ OBJ := initiate.o \
        stringsnames.o \
        rhoinfcalc.o \
        shielding3D.o \
-       utils.o
+       utils.o \
+       utilsc.o
 # Reinjection related objects
 OBJ += orbitinject.o \
        extint.o \

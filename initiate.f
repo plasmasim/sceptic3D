@@ -707,3 +707,73 @@ c********************************************************************
       enddo
 
       end
+
+
+c***********************************************************************
+c Return index of left hand mesh point
+      integer function meshindex(pos)
+      implicit none
+c     Common blocks
+      include 'piccom.f'
+      include 'errcom.f'
+c     Input variables
+      real pos(6)
+c     Local variables
+      integer i
+      integer irl,ithl,ipl
+      real ct,st,cp,sp,rp
+      real zetap,hf,pf,thf,rf
+      integer ih
+      real hp
+      real rsp
+      real x,y,z
+      external interpth,interppsi
+      integer interpth,interppsi
+
+c     Following inefficient algorithm quickly adapted from ptomesh
+      x=pos(1)
+      y=pos(2)
+      z=pos(3)
+
+      rsp=x**2+y**2
+      rp=sqrt(rsp+z**2)
+
+c psi sin/cos
+      rsp=sqrt(rsp)
+      if(rsp .gt. 1.e-9) then
+         cp=x/rsp
+         sp=y/rsp
+      else
+         cp=1.
+         sp=0.
+      endif
+
+      ipl=interppsi(sp,cp,pf)
+
+c theta sin/cos
+      st=rsp/rp
+      ct=z/rp
+
+      ithl=interpth(ct,thf)
+
+      irl=irpre(1+int((rp-r(1))*rfac))
+      rf=(rp-r(irl))/(r(irl+1)-r(irl))
+c "While not"
+ 402  if(rf.le.1.)goto 401
+      irl=irl+1
+      rf=(rp-r(irl))/(r(irl+1)-r(irl))
+      goto 402
+ 401  continue
+
+      meshindex = irl + (ithl-1)*nr + (ipl-1)*nth*nr
+      if (meshindex.ge.0.and.meshindex.le.nth*nr*npsi) then
+c        All appears well
+      else
+         write (*,*) 'Bad index in meshindex: ', meshindex,
+     $     ' for pos:', pos(1), pos(2), pos(3),
+     $     ' for indices:', irl, ithl, ipl,
+     $     ' out of:', nr, nth, npsi
+      endif
+
+      return
+      end

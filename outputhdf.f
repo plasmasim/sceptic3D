@@ -386,9 +386,9 @@ c Write the data in this group
 
 c     Variable arrays
       rank = 3
-      data_dims(1) = nr-1
-      data_dims(2) = nth-1
-      data_dims(3) = npsi-1
+      data_dims(1) = nr
+      data_dims(2) = nth
+      data_dims(3) = npsi
       storage_dims(1) = nrsize-1
       storage_dims(2) = nthsize-1
       storage_dims(3) = npsisize-1

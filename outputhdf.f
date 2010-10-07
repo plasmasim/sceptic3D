@@ -16,7 +16,7 @@ c Functions
       integer nbcat
 c Local variables
 c     File, group, and dataset names
-      CHARACTER(LEN=55) :: filename
+      CHARACTER(LEN=155) :: filename
       CHARACTER(LEN=55) :: groupname
       CHARACTER(LEN=55) :: dsetname
 c     File and group ids

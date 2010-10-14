@@ -6,8 +6,10 @@ c     Flag indicating whether to save potential for nstepsssave steps
       logical lsavephi
 c     Max grid size and steps to save
       integer nrsizesave,nthsizesave,npsisizesave,nstepssave
-      parameter (nrsizesave=61,nthsizesave=11,npsisizesave=11
-     $  ,nstepssave=3001)
+      parameter (nrsizesave=11,nthsizesave=11,npsisizesave=11
+     $  ,nstepssave=31)
+c      parameter (nrsizesave=61,nthsizesave=11,npsisizesave=11
+c     $  ,nstepssave=3001)
 cc     Make small unless debugging
 c      parameter (nrsizesave=6,nthsizesave=6,npsisizesave=6
 c     $  ,nstepssave=21)

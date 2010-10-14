@@ -183,7 +183,7 @@ c from 0 to 9)
 c********************************************************************
 c diagnostic data
       integer nvmax,nrein,nreintry,ninner,nstepmax
-      parameter (nvmax=60,nstepmax=10001)
+      parameter (nvmax=60,nstepmax=50001)
       real nvdiag(nvmax),nvdiagave(nvmax),vdiag(nvmax)
       real vrdiagin(nvmax),vtdiagin(nvmax)
       real vrange

@@ -72,7 +72,7 @@ c     Turn on these when testing convergence with changing grid size
       call nameappendint(filename,'Nr',nrused,3)
       call nameappendint(filename,'Nt',nthused,3)
       call nameappendint(filename,'Np',npsiused,3)
-      call nameappendint(filename,'s',maxsteps,4)
+      call nameappendint(filename,'s',maxsteps,5)
 
       idf=nbcat(filename,'.h5')
 

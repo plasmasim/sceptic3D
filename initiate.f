@@ -300,7 +300,9 @@ c      real rpos(3), rs, ct, st, cp, sp
 
 c     When the simulation starts, the ion density is uniform, so start
 c     with a Debye Huckel form only accounting for the electron response
-      decay=debyelen
+c      decay=debyelen
+c     Debugging...may be causing NaN accel for zero debyelen
+      decay=max(debyelen,0.01)
 c max(debyelen,0.01)/sqrt(1+1/(Ti+vd**2))
 
       sB=sqrt(1-cB**2)

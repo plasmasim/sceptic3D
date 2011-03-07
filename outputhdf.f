@@ -384,6 +384,35 @@ c Create a group in the file.
 
 c Write the data in this group
 
+c     Single value variables
+      rank = 1
+      data_dims(1) = 1
+      storage_dims(1) = 1
+
+      dsetname = 'nx'
+      call writehdfintmat(group_id,dsetname,
+     $ nx,storage_dims,data_dims,rank)
+
+      dsetname = 'ny'
+      call writehdfintmat(group_id,dsetname,
+     $ ny,storage_dims,data_dims,rank)
+
+      dsetname = 'nz'
+      call writehdfintmat(group_id,dsetname,
+     $ nz,storage_dims,data_dims,rank)
+
+      dsetname = 'nvx'
+      call writehdfintmat(group_id,dsetname,
+     $ nvx,storage_dims,data_dims,rank)
+
+      dsetname = 'nvy'
+      call writehdfintmat(group_id,dsetname,
+     $ nvy,storage_dims,data_dims,rank)
+
+      dsetname = 'nvz'
+      call writehdfintmat(group_id,dsetname,
+     $ nvz,storage_dims,data_dims,rank)
+
 c     Variable arrays
       rank = 3
       data_dims(1) = nr
@@ -484,6 +513,53 @@ c     Variable arrays
       dsetname = 'vtpDiag'
       call writehdfrealmat(group_id,dsetname,
      $  vtpDiag,storage_dims,data_dims,rank)
+
+      rank = 4
+      data_dims(2) = nz
+      data_dims(3) = ny
+      data_dims(4) = nz
+      storage_dims(2) = nx
+      storage_dims(3) = ny
+      storage_dims(4) = nz
+
+      dsetname = 'vxdistf'
+      data_dims(1) = nvx
+      storage_dims(1) = nvx
+      call writehdfintmat(group_id,dsetname,
+     $  vxdistf,storage_dims,data_dims,rank)
+
+      dsetname = 'vydistf'
+      data_dims(1) = nvy
+      storage_dims(1) = nvy
+      call writehdfintmat(group_id,dsetname,
+     $  vydistf,storage_dims,data_dims,rank)
+
+      dsetname = 'vzdistf'
+      data_dims(1) = nvz
+      storage_dims(1) = nvz
+      call writehdfintmat(group_id,dsetname,
+     $  vzdistf,storage_dims,data_dims,rank)
+
+      dsetname = 'vxbins'
+      rank = 1
+      data_dims(1) = nvx+1
+      storage_dims(1) = nvx+1
+      call writehdfrealmat(group_id,dsetname,
+     $  vxbins,storage_dims,data_dims,rank)
+
+      dsetname = 'vybins'
+      rank = 1
+      data_dims(1) = nvy+1
+      storage_dims(1) = nvy+1
+      call writehdfrealmat(group_id,dsetname,
+     $  vybins,storage_dims,data_dims,rank)
+
+      dsetname = 'vzbins'
+      rank = 1
+      data_dims(1) = nvz+1
+      storage_dims(1) = nvz+1
+      call writehdfrealmat(group_id,dsetname,
+     $  vzbins,storage_dims,data_dims,rank)
 
       dsetname = 'curr'
       rank = 1

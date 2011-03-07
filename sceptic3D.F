@@ -76,6 +76,11 @@ c     Sort particles every nsort steps
       integer nsort
       logical lsort
 
+c     output arrays for MPI reduce of distribution function
+      integer vxdistfout(nvx,nx,ny,nz)
+      integer vydistfout(nvy,nx,ny,nz)
+      integer vzdistfout(nvz,nx,ny,nz)
+
 c Parallel processing MPI options.
 #ifdef MPI
       include 'mpif.h'
@@ -559,6 +564,33 @@ c Initialize velocity diagnostics
       endif
       iocprev=npart
 
+c Set velocity bins for distribution function diagnostic and zero arrays
+      do ii=0,nvx
+         vxbins(ii) = vrange*(float(ii)/nvx-0.5)
+      enddo
+      do ii=0,nvy
+         vybins(ii) = vrange*(float(ii)/nvy-0.5)
+      enddo
+      do ii=0,nvz
+         vzbins(ii) = vrange*(float(ii)/nvx-0.5)
+      enddo
+      do i=1,nx
+         do j=1,ny
+            do k=1,nz
+               do ii=1,nvx
+                  vxdistf(ii,i,j,k) = 0
+               enddo
+               do ii=1,nvy
+                  vydistf(ii,i,j,k) = 0
+               enddo
+               do ii=1,nvz
+                  vzdistf(ii,i,j,k) = 0
+               enddo
+            enddo
+         enddo
+      enddo
+      ldistf=.false.
+
 c Read in the previous particle distribution and averages.
       if(readpart) call partrd(success)
 c     For debugging, notify if read particles
@@ -690,8 +722,10 @@ c     that chargediag calculates them.
             if(mod(i-(maxsteps-diagsamp*nstepsave)+diagsamp,diagsamp).eq
      $           .(diagsamp-1))then
                samp=.true.
+               ldistf=.true.
             else
                samp=.false.
+               ldistf=.false.
             endif
          endif
 
@@ -1107,6 +1141,34 @@ c Average various fluxes and fields:
       call chargetomesh()
   
       call sumreduce()
+
+#ifdef MPI
+      ldistf=.true.
+      if (ldistf) then
+c        MPI sum distribution function diagnostic
+         call MPI_REDUCE(vxdistf,vxdistfout,nvx*nx*ny*nz,MPI_INTEGER,
+     $        MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vydistf,vydistfout,nvy*nx*ny*nz,MPI_INTEGER,
+     $        MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         call MPI_REDUCE(vzdistf,vzdistfout,nvz*nx*ny*nz,MPI_INTEGER,
+     $        MPI_SUM,0,MPI_COMM_WORLD,ierr)
+         do kk=1,nz
+            do jj=1,ny
+               do ii=1,nx
+                  do iiv=1,nvx
+                     vxdistf(iiv,ii,jj,kk)=vxdistfout(iiv,ii,jj,kk)
+                  enddo
+                  do iiv=1,nvy
+                     vydistf(iiv,ii,jj,kk)=vydistfout(iiv,ii,jj,kk)
+                  enddo
+                  do iiv=1,nvz
+                     vzdistf(iiv,ii,jj,kk)=vzdistfout(iiv,ii,jj,kk)
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
+#endif
 
  509  continue
       if(myid.eq.0)then

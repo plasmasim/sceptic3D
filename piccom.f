@@ -127,6 +127,16 @@ c Diagnostic sums
       real vrpDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
       real vtpDiag(1:nrsize-1,1:nthsize-1,1:npsisize-1)
 
+c Cartesian distribution function diagnostics
+      logical ldistf
+      integer nx, ny, nz, nvx, nvy, nvz
+      parameter (nx=25, ny=25, nz=25)
+      parameter (nvx=25, nvy=25, nvz=25)
+      real vxbins(0:nvx), vybins(0:nvy), vzbins(0:nvz)
+      integer vxdistf(1:nvx,1:nx,1:ny,1:nz)
+      integer vydistf(1:nvy,1:nx,1:ny,1:nz)
+      integer vzdistf(1:nvz,1:nx,1:ny,1:nz)
+
 c     Total sum of particle xyz-velocities, i.e. total current curr(4)
 c     is the particle sum
       real curr(4)
@@ -134,6 +144,7 @@ c     is the particle sum
       common /momcom/psum,vrsum,vtsum,vpsum,vr2sum,vt2sum,vp2sum ,vrtsum
      $     ,vrpsum,vtpsum,vzsum,vxsum,vysum,curr,pDiag,vrDiag,vtDiag
      $     ,vpDiag,vr2Diag,vt2Diag,vp2Diag ,vrtDiag,vrpDiag,vtpDiag
+     $     ,vxbins,vybins,vzbins,vxdistf,vydistf,vzdistf,ldistf
 c*********************************************************************
 c Radius mesh
       real r(0:nrsize),rcc(0:nrsize)

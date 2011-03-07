@@ -335,6 +335,64 @@ c     or if we plot the diagrams (i.e. not -g)
 
       endif
 
+      if(ldistf) then
+
+c     Distribution function diagnostics
+
+c     Find velocity bins (assume few bins, so don't bother
+c       with bisection for now)
+      if (xp(4,i) .lt. vxbins(0)) then
+         ivx = 1
+      elseif (xp(4,i) .gt. vxbins(nvx)) then
+         ivx = nvx
+      else
+         do j=1,nvx
+            ivx = j
+            if (xp(4,i) .lt. vxbins(j)) then
+               exit
+            endif
+         enddo
+      endif
+
+      if (xp(5,i) .lt. vybins(0)) then
+         ivy = 1
+      elseif (xp(5,i) .gt. vybins(nvy)) then
+         ivy = nvy
+      else
+         do j=1,nvy
+            ivy = j
+            if (xp(5,i) .lt. vybins(j)) then
+               exit
+            endif
+         enddo
+      endif
+
+      if (xp(6,i) .lt. vzbins(0)) then
+         ivz = 1
+      elseif (xp(6,i) .gt. vzbins(nvz)) then
+         ivz = nvz
+      else
+         do j=1,nvz
+            ivz = j
+            if (xp(6,i) .lt. vzbins(j)) then
+               exit
+            endif
+         enddo
+      endif
+
+c     Find spatial bins
+      ix = max(1,(xp(1,i)/rcc(nrused)+1)/2*nx)
+      iy = max(1,(xp(2,i)/rcc(nrused)+1)/2*ny)
+      iz = max(1,(xp(3,i)/rcc(nrused)+1)/2*nz)
+
+c     Increment counter for corresponding bin
+      vxdistf(ivx,ix,iy,iz) = vxdistf(ivx,ix,iy,iz) + 1;
+      vydistf(ivy,ix,iy,iz) = vydistf(ivy,ix,iy,iz) + 1;
+      vzdistf(ivz,ix,iy,iz) = vzdistf(ivz,ix,iy,iz) + 1;
+
+
+      endif
+
       if(diags)then
 
       vx=xp(4,i)

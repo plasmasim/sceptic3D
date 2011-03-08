@@ -131,7 +131,7 @@ c Cartesian distribution function diagnostics
       logical ldistf
       integer nx, ny, nz, nvx, nvy, nvz
       parameter (nx=25, ny=25, nz=25)
-      parameter (nvx=25, nvy=25, nvz=25)
+      parameter (nvx=100, nvy=100, nvz=100)
       real vxbins(0:nvx), vybins(0:nvy), vzbins(0:nvz)
       integer vxdistf(1:nvx,1:nx,1:ny,1:nz)
       integer vydistf(1:nvy,1:nx,1:ny,1:nz)
@@ -194,7 +194,7 @@ c from 0 to 9)
 c********************************************************************
 c diagnostic data
       integer nvmax,nrein,nreintry,ninner,nstepmax
-      parameter (nvmax=60,nstepmax=50001)
+      parameter (nvmax=60,nstepmax=10001)
       real nvdiag(nvmax),nvdiagave(nvmax),vdiag(nvmax)
       real vrdiagin(nvmax),vtdiagin(nvmax)
       real vrange

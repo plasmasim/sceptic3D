@@ -202,6 +202,10 @@ c Deal with arguments
       if(iargc().eq.0) goto 51
       do 1 i=1,iargc()
          call getarg(i,string)
+c        Check for end argument string...required since some MPI versions add their own command line inputs
+         if(string(1:3) .eq. '-ea') then
+            goto 3
+         endif
          if(string(1:1) .eq. ' ') then
             goto 3
          endif
@@ -1212,7 +1216,7 @@ c Help section
       write(*,*)
      $ 'Usage: sceptic3D [-t.. -s.. -d.. -c..',
      $     ' -x.. -v.. -p.. -l.. -e[..] -r -w -g -?]'
-      write(*,*)' e.g. ./sceptic -v0.2 -nr50 -nt30 -d.05'
+      write(*,*)' e.g. ./sceptic3D -v0.2 -nr50 -nt30 -d.05'
       write(*,*)' Switch arguments (defaults):[.ff=float, nnn=integer]'
       write(*,*)' -t.ff,-tn.ff ion and neutr. temp (Ti=1, Tn=Ti);',
      $     ' -snnn max time steps (500);',
@@ -1263,6 +1267,7 @@ c Help section
      $     '-bohm Impose Bohm condition when LDe=0.'
       write(*,*)' --fulloutput do not suppress output of large arrays.'
       write(*,*)' -sortnnn sort prticles every n steps'
+      write(*,*)' -ea indicate end of argument list (if MPI args after)'
 
       end
 

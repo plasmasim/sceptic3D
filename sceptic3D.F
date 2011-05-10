@@ -291,14 +291,14 @@ c        For debugging, give option to save A and/or phi
             read(string(4:),*)cd
          elseif(string(1:3) .eq. '-cB')then
             read(string(4:),*)cB
+         elseif(string(1:4) .eq. '-cnd')then
+            read(string(5:),*)cnd
          elseif(string(1:2) .eq. '-c') then
             read(string(3:),*)bdt
          endif
          if(string(1:2) .eq. '-x') read(string(3:),*)rmax
          if(string(1:3) .eq. '-vn') then
             read(string(4:),*)vneutral
-         elseif(string(1:4) .eq. '-cnd')then
-            read(string(5:),*)cnd
          elseif(string(1:6) .eq. '-psind')then
             read(string(7:),*)psind
          elseif(string(1:4) .eq. '-ver') then

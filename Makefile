@@ -1,8 +1,10 @@
 # Universal Makefile for sceptic3D
 
-
 # Set shell to bash (default is sh)
 SHELL := /bin/bash
+
+# Set SCEPTIC3D version number
+VERSION := 0.9
 
 # Set number of threads to use for HDF make
 NUMPROC := 8
@@ -165,20 +167,28 @@ fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -o $* $(OPTCOMP) $*.F $(LIB)
 
 
-# Distributable archive
-sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
+# Distributable archive (explicitly make .PHONY to force rebuild) 
+sceptic3Dprod.tar.gz :
 	make -C accis mproper
-	make -C tools clean
-	make clean
-	./copyattach.sh
-	tar chzf sceptic3D.tar.gz -C .. sceptic3D
+	make cleanall
+	./copyattach.sh $(VERSION)
+	tar -chzf sceptic3Dprod.tar.gz -C .. sceptic3Dprod \
+	  --exclude-vcs --exclude="hdf5-1.8.4" \
+	  --exclude="sceptic3Dprod.tar.gz"
 	./copyremove.sh
+
+# Distributable HDF archive (explicitly make .PHONY to force rebuild)
+hdf5-1.8.4.tar.gz :
+	make cleanhdf
+	tar -chzf hdf5-1.8.4.tar.gz hdf5-1.8.4
 
 
 # The following targets will never actually exist
-.PHONY: all clean cleandata cleanaccis cleanhdf cleanall ftnchek
+.PHONY: all distro clean cleandata cleanaccis cleanhdf cleanall ftnchek sceptic3D.tar.gz hdf5-1.8.4.tar.gz
 
 all : sceptic3D sceptic3Dhdf sceptic3Dmpi sceptic3Dmpihdf
+
+distro : sceptic3Dprod.tar.gz hdf5-1.8.4.tar.gz
 
 clean :
 	-rm *.o
@@ -187,6 +197,7 @@ clean :
 	-rm *.html
 	-rm Orbits.txt
 	-rm *~
+	-rm \#*\#
 
 cleandata :
 	-rm *.dat

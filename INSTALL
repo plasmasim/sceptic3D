@@ -1,0 +1,16 @@
+Installation instructions for SCEPTIC3D
+
+`make sceptic3D` builds the serial version with ASCII output.
+Note that this requires the development versions of the Xt and X11 libraries.
+
+`make sceptic3Dmpi` builds the parallel version with ASCII output.
+Note that this also requires an MPI implementation (tested with MPICH2).
+
+`make sceptic3Dhdf` builds the serial version with HDF output.
+Note that this also requires the folder hdf5-1.8.4 to be in the
+sceptic3Dprod directory. 
+
+`make sceptic3Dmpihdf` builds the parallel version with HDF output.
+
+
+`./sceptic3D` will give a usage message once built.

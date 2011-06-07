@@ -5,12 +5,12 @@ This package contains:
 
 	1) the SCEPTIC3D code (main folder)
 	2) a library of graphic functions (accis)
+	3) matlab postprocessing tools (Matlabtools)
 
 
 Optional functionality available in separate archives:
 
 	1) a subfolder required for HDF5 output (hdf5-1.8.4)
-	2) matlab postprocessing tools (Matlabtools)
 
 
 

@@ -49,33 +49,12 @@ listed in the header of the file sceptic3D.F.
 
 
 
-Reading SCEPTIC3D .dat files
-______________________________________________________________________
-
-After a run is complete, sceptic creates a .dat file.
-
-The .dat file can be read with ./tools./postproc:
-
-Example:
-
-./postproc -f -b -n -t -e -l ./../T1m1v050r20P04L1e0B12m1.dat
-
-running ./postproc without flags gives some help
-
-Several ./dat files with different magnetic fields can be analyzed
-together using postprocB.
-
-Example:
-
-./postprocB ./../T1m1v050r20P04L1e0B*.dat
-
-
-
-Reading SCEPTIC .dat files using matlab
+Reading SCEPTIC3D .dat files using Matlab
 _____________________________________________________________________
 
-The folder Matlabtools contains several Matlab routines to perform
-essentially the same tasks as the fortran tools.
+The folder Matlabtools contains several Matlab routines that read and
+process the SCEPTIC3D ASCII output file. See the file README.pdf in
+that folder for details.
 
 
 

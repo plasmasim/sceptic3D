@@ -851,7 +851,7 @@ c Help section
       write(*,*)
      $ 'Usage: sceptic3D [-t.. -s.. -d.. -c..',
      $     ' -x.. -v.. -p.. -l.. -e[..] -r -w -g -?]'
-      write(*,*)' e.g. ./sceptic -v0.2 -nr50 -nt30 -d.05'
+      write(*,*)' e.g. ./sceptic3D -v0.2 -nr50 -nt30 -d.05'
       write(*,*)' Switch arguments (defaults):[.ff=float, nnn=integer]'
       write(*,*)' -t.ff ion temp Ti (1);',
      $     ' -snnn max time steps (500);',

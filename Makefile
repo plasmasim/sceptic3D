@@ -175,6 +175,8 @@ sceptic3Dprod.tar.gz : ./tar-1.26/src/tar
 	./tar-1.26/src/tar -chzf sceptic3Dprod.tar.gz \
 	  -C .. sceptic3Dprod \
 	  --exclude-vcs --exclude="hdf5-1.8.4" \
+	  --exclude="hdf5-1.8.4.tar.gz" \
+	  --exclude="tar-1.26" \
 	  --exclude="sceptic3Dprod.tar.gz"
 	./copyremove.sh
 
@@ -205,6 +207,7 @@ clean :
 	-rm Orbits.txt
 	-rm *~
 	-rm \#*\#
+	-rm sceptic3D sceptic3Dmpi sceptic3Dhdf sceptic3Dmpihdf
 
 cleandata :
 	-rm *.dat

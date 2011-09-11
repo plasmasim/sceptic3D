@@ -168,16 +168,16 @@ fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 
 
 # Distributable archive (explicitly make .PHONY to force rebuild) 
-sceptic3Dprod.tar.gz : ./tar-1.26/src/tar
+sceptic3D.tar.gz : ./tar-1.26/src/tar
 	make -C accis mproper
 	make cleanall
 	./copyattach.sh $(VERSION)
-	./tar-1.26/src/tar -chzf sceptic3Dprod.tar.gz \
-	  -C .. sceptic3Dprod \
+	./tar-1.26/src/tar -chzf sceptic3D.tar.gz \
+	  -C .. sceptic3D \
 	  --exclude-vcs --exclude="hdf5-1.8.4" \
 	  --exclude="hdf5-1.8.4.tar.gz" \
 	  --exclude="tar-1.26" \
-	  --exclude="sceptic3Dprod.tar.gz"
+	  --exclude="sceptic3D.tar.gz"
 	./copyremove.sh
 
 # Distributable HDF archive (explicitly make .PHONY to force rebuild)
@@ -193,11 +193,11 @@ hdf5-1.8.4.tar.gz : ./tar-1.26/src/tar
 
 
 # The following targets will never actually exist
-.PHONY: all distro clean cleandata cleanaccis cleanhdf cleanall ftnchek sceptic3Dprod.tar.gz hdf5-1.8.4.tar.gz
+.PHONY: all distro clean cleandata cleanaccis cleanhdf cleanall ftnchek sceptic3D.tar.gz hdf5-1.8.4.tar.gz
 
 all : sceptic3D sceptic3Dhdf sceptic3Dmpi sceptic3Dmpihdf
 
-distro : sceptic3Dprod.tar.gz hdf5-1.8.4.tar.gz
+distro : sceptic3D.tar.gz hdf5-1.8.4.tar.gz
 
 clean :
 	-rm *.o
@@ -206,6 +206,7 @@ clean :
 	-rm *.html
 	-rm Orbits.txt
 	-rm *~
+	-rm .*~
 	-rm \#*\#
 	-rm sceptic3D sceptic3Dmpi sceptic3Dhdf sceptic3Dmpihdf
 

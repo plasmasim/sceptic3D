@@ -1,8 +1,10 @@
 # Universal Makefile for sceptic3D
 
-
 # Set shell to bash (default is sh)
 SHELL := /bin/bash
+
+# Set SCEPTIC3D version number
+VERSION := 0.9
 
 # Set number of threads to use for HDF make
 NUMPROC := 8
@@ -52,7 +54,7 @@ OPTCOMP += -g
 # Do bounds check (debugging)
 #OPTCOMP += -ffortran-bounds-check
 # Save profiling information (debugging)
-OPTCOMP += -pg
+#OPTCOMP += -pg
 
 # Options to pass to compiler for HDF version
 OPTCOMPHDF := $(OPTCOMP)
@@ -165,20 +167,37 @@ fvinject.o : fvinject.f fvcom.f piccom.f errcom.f
 	$(G77) -o $* $(OPTCOMP) $*.F $(LIB)
 
 
-# Distributable archive
-sceptic3D.tar.gz : ./accis/libaccisX.a sceptic3D sceptic3Dmpi
+# Distributable archive (explicitly make .PHONY to force rebuild) 
+sceptic3D.tar.gz : ./tar-1.26/src/tar
 	make -C accis mproper
-	make -C tools clean
-	make clean
-	./copyattach.sh
-	tar chzf sceptic3D.tar.gz -C .. sceptic3D
+	make cleanall
+	./copyattach.sh $(VERSION)
+	./tar-1.26/src/tar -chzf sceptic3D.tar.gz \
+	  -C .. sceptic3D \
+	  --exclude-vcs --exclude="hdf5-1.8.4" \
+	  --exclude="hdf5-1.8.4.tar.gz" \
+	  --exclude="tar-1.26" \
+	  --exclude="sceptic3D.tar.gz"
 	./copyremove.sh
+
+# Distributable HDF archive (explicitly make .PHONY to force rebuild)
+hdf5-1.8.4.tar.gz : ./tar-1.26/src/tar
+	make cleanhdf
+	./tar-1.26/src/tar -chzf hdf5-1.8.4.tar.gz hdf5-1.8.4 \
+	  --exclude-vcs
+
+# Need tar version with --exclude-vcs support, so build from source
+./tar-1.26/src/tar :
+	cd tar-1.26 && ./configure
+	make -C tar-1.26
 
 
 # The following targets will never actually exist
-.PHONY: all clean cleandata cleanaccis cleanhdf cleanall ftnchek
+.PHONY: all distro clean cleandata cleanaccis cleanhdf cleanall ftnchek sceptic3D.tar.gz hdf5-1.8.4.tar.gz
 
 all : sceptic3D sceptic3Dhdf sceptic3Dmpi sceptic3Dmpihdf
+
+distro : sceptic3D.tar.gz hdf5-1.8.4.tar.gz
 
 clean :
 	-rm *.o
@@ -187,6 +206,9 @@ clean :
 	-rm *.html
 	-rm Orbits.txt
 	-rm *~
+	-rm .*~
+	-rm \#*\#
+	-rm sceptic3D sceptic3Dmpi sceptic3Dhdf sceptic3Dmpihdf
 
 cleandata :
 	-rm *.dat

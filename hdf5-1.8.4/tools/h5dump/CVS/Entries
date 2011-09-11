@@ -1,9 +1,0 @@
-/Makefile.am/1.1/Tue Jun 15 17:12:50 2010//
-/Makefile.in/1.1/Tue Jun 15 17:12:50 2010//
-/binread.c/1.1/Tue Jun 15 17:12:50 2010//
-/h5dump.c/1.1/Tue Jun 15 17:12:50 2010//
-/h5dump.h/1.1/Tue Jun 15 17:12:50 2010//
-/h5dumpgentest.c/1.1/Tue Jun 15 17:12:50 2010//
-/testh5dump.sh.in/1.1/Tue Jun 15 17:12:50 2010//
-/testh5dumpxml.sh.in/1.1/Tue Jun 15 17:12:50 2010//
-D

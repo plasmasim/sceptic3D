@@ -1,0 +1,27 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Emacs backup files
+*~
+\#*\#
+
+# HDF and tar files
+hdf5-1.8.4/*
+tar-1.26/*
+
+# Executables etc.
+accis/makefile
+sceptic3D
+sceptic3Dhdf
+sceptic3Dmpi
+sceptic3Dmpihdf
